@@ -1,0 +1,40 @@
+<svg width="1440" height="860" viewBox="0 0 1440 860" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1440" height="860" rx="28" fill="#061117"/>
+  <rect x="36" y="32" width="1368" height="796" rx="22" fill="#0A1820" stroke="#203746" stroke-width="2"/>
+  <circle cx="78" cy="68" r="10" fill="#FF6B6B"/>
+  <circle cx="108" cy="68" r="10" fill="#FFD166"/>
+  <circle cx="138" cy="68" r="10" fill="#06D6A0"/>
+  <text x="180" y="76" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="28">af tui signals</text>
+
+  <rect x="56" y="102" width="570" height="680" rx="18" fill="#0F1F2A" stroke="#2D505B" stroke-width="2"/>
+  <rect x="648" y="102" width="720" height="680" rx="18" fill="#0F1F2A" stroke="#F2C14E" stroke-width="3"/>
+
+  <text x="82" y="144" fill="#B8D7E3" font-family="Menlo, Monaco, Consolas, monospace" font-size="22">Signals</text>
+  <text x="674" y="144" fill="#F6E4A8" font-family="Menlo, Monaco, Consolas, monospace" font-size="22">Selected Signal</text>
+
+  <text x="82" y="190" fill="#7FD1AE" font-family="Menlo, Monaco, Consolas, monospace" font-size="18">/ bullish</text>
+  <text x="82" y="232" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="19">&gt; BTC  Bullish MACD crossover</text>
+  <text x="82" y="260" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="17">  BULLISH | 70000 | 2026-03-18 09:30</text>
+  <text x="82" y="304" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="19">  SOL  Resistance breakout</text>
+  <text x="82" y="332" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="17">  BULLISH | 180 | 2026-03-18 10:15</text>
+  <text x="82" y="376" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="19">  ETH  Fresh momentum inflection</text>
+  <text x="82" y="404" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="17">  BULLISH | 4000 | 2026-03-18 11:00</text>
+
+  <text x="674" y="196" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="28">BTC Bullish MACD crossover</text>
+  <text x="674" y="236" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="19">timestamp:   2026-03-18 09:30:00 UTC</text>
+  <text x="674" y="266" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="19">direction:   BULLISH</text>
+  <text x="674" y="296" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="19">signalKey:   FRESH_MOMENTUM_MACD_SIGNAL_LINE_CROSSOVER</text>
+  <text x="674" y="326" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="19">symbol:      BTC</text>
+  <text x="674" y="356" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="19">symbolName:  Bitcoin</text>
+  <text x="674" y="386" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="19">lastPrice:   70000</text>
+  <text x="674" y="416" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="19">priceChange: 2.5</text>
+  <text x="674" y="446" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="19">marketCap:   1000000</text>
+
+  <text x="674" y="502" fill="#F6E4A8" font-family="Menlo, Monaco, Consolas, monospace" font-size="20">Signal-driven workflow</text>
+  <text x="674" y="540" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="22">1. Scan bullish setups</text>
+  <text x="674" y="572" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="22">2. Inspect detail and timing</text>
+  <text x="674" y="604" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="22">3. Pull TA or OHLCV next</text>
+
+  <text x="674" y="688" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="18">j/k move  |  / search  |  Enter detail  |  Tab focus  |  q quit</text>
+  <text x="674" y="720" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="18">permits 42/2000  |  updated 14:27:18  |  auth env</text>
+</svg>

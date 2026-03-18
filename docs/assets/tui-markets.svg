@@ -1,0 +1,52 @@
+<svg width="1440" height="860" viewBox="0 0 1440 860" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1440" height="860" rx="28" fill="#071018"/>
+  <rect x="36" y="32" width="1368" height="796" rx="22" fill="#0B1720" stroke="#203746" stroke-width="2"/>
+  <circle cx="78" cy="68" r="10" fill="#FF6B6B"/>
+  <circle cx="108" cy="68" r="10" fill="#FFD166"/>
+  <circle cx="138" cy="68" r="10" fill="#06D6A0"/>
+  <text x="180" y="76" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="28">af tui markets</text>
+
+  <rect x="56" y="102" width="520" height="680" rx="18" fill="#0F1F2A" stroke="#2D505B" stroke-width="2"/>
+  <rect x="598" y="102" width="500" height="470" rx="18" fill="#0F1F2A" stroke="#4CC9A6" stroke-width="3"/>
+  <rect x="1108" y="102" width="260" height="470" rx="18" fill="#0F1F2A" stroke="#4B7BEC" stroke-width="2"/>
+  <rect x="598" y="594" width="770" height="188" rx="18" fill="#0F1F2A" stroke="#2D505B" stroke-width="2"/>
+
+  <text x="82" y="144" fill="#B8D7E3" font-family="Menlo, Monaco, Consolas, monospace" font-size="22">Markets</text>
+  <text x="624" y="144" fill="#B8F3D7" font-family="Menlo, Monaco, Consolas, monospace" font-size="22">Detail</text>
+  <text x="1130" y="144" fill="#A8C6FF" font-family="Menlo, Monaco, Consolas, monospace" font-size="22">Filter</text>
+  <text x="624" y="636" fill="#B8D7E3" font-family="Menlo, Monaco, Consolas, monospace" font-size="22">Footer</text>
+
+  <text x="82" y="188" fill="#7FD1AE" font-family="Menlo, Monaco, Consolas, monospace" font-size="18">/ btc</text>
+  <text x="82" y="230" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="20">&gt; Bitcoin (BTC)</text>
+  <text x="82" y="258" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="18">  Last price 70000</text>
+  <text x="82" y="304" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="20">  Ethereum (ETH)</text>
+  <text x="82" y="332" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="18">  Last price 4000</text>
+  <text x="82" y="378" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="20">  Solana (SOL)</text>
+  <text x="82" y="406" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="18">  Last price 180</text>
+  <text x="82" y="452" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="20">  Chainlink (LINK)</text>
+  <text x="82" y="480" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="18">  Last price 29</text>
+
+  <text x="624" y="192" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="26">Bitcoin (BTC)</text>
+  <text x="624" y="228" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="19">Last price: 70000</text>
+  <text x="624" y="258" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="19">MARKET_CAP: 1000000</text>
+  <text x="624" y="288" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="19">RSI14: 61.2</text>
+  <text x="624" y="332" fill="#B8F3D7" font-family="Menlo, Monaco, Consolas, monospace" font-size="20">OHLCV Sparkline</text>
+  <text x="624" y="372" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="24">          __</text>
+  <text x="624" y="402" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="24">    __---'  `---__</text>
+  <text x="624" y="432" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="24"> _-'              `--_</text>
+  <text x="624" y="484" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="18">Use j/k to move, Enter for detail, f for filter.</text>
+
+  <text x="1130" y="188" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="16">{</text>
+  <text x="1130" y="214" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="16">  "symbols": [</text>
+  <text x="1130" y="240" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="16">    "BTC",</text>
+  <text x="1130" y="266" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="16">    "ETH"</text>
+  <text x="1130" y="292" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="16">  ],</text>
+  <text x="1130" y="318" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="16">  "displayType": [</text>
+  <text x="1130" y="344" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="16">    "MARKET_CAP",</text>
+  <text x="1130" y="370" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="16">    "RSI14"</text>
+  <text x="1130" y="396" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="16">  ]</text>
+  <text x="1130" y="422" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="16">}</text>
+
+  <text x="624" y="676" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="18">j/k or arrows move  |  / search  |  Enter detail  |  f filter</text>
+  <text x="624" y="708" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="18">r refresh  |  permits 42/2000  |  updated 14:25:03  |  auth env</text>
+</svg>

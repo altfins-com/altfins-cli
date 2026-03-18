@@ -1,0 +1,40 @@
+version: 2
+
+project_name: af
+
+before:
+  hooks:
+    - go mod tidy
+    - go test ./...
+
+builds:
+  - id: af
+    binary: af
+    main: .
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+checksum:
+  name_template: checksums.txt
+
+brews:
+  - repository:
+      owner: altfins-com
+      name: homebrew-tap
+    directory: Formula
+    homepage: https://altfins.com
+    description: altFINS CLI for market data, analytics, signals, and TUI workflows
+    license: MIT
