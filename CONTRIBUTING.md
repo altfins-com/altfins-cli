@@ -51,3 +51,5 @@ Public install docs are package-manager-first. If you change release channels, a
 - `docs/releasing.md`
 
 README install commands are a public contract and should only document channels that are actually published.
+
+For Windows package-manager publication details, see [docs/winget.md](docs/winget.md).

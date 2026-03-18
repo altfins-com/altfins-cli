@@ -38,3 +38,39 @@ brews:
     homepage: https://altfins.com
     description: altFINS CLI for market data, analytics, signals, and TUI workflows
     license: MIT
+
+winget:
+  - name: af
+    ids:
+      - af
+    package_name: altFINS CLI
+    package_identifier: altfins.af
+    publisher: altFINS
+    publisher_url: https://altfins.com
+    publisher_support_url: https://github.com/altfins-com/altfins-cli/issues
+    homepage: https://altfins.com
+    short_description: altFINS CLI for market data, analytics, signals, and TUI workflows
+    description: Terminal-native altFINS client for market data, analytics, signals, news, and TUI workflows.
+    license: MIT
+    copyright: altFINS
+    tags:
+      - crypto
+      - cli
+      - trading
+      - analytics
+      - tui
+    repository:
+      owner: "{{ if .Env.WINGET_OWNER }}{{ .Env.WINGET_OWNER }}{{ else }}feci{{ end }}"
+      name: winget-pkgs
+      branch: "altfins-af-{{ .Version }}"
+      pull_request:
+        enabled: true
+        draft: true
+        base:
+          owner: microsoft
+          name: winget-pkgs
+          branch: master
+    commit_author:
+      name: Tomas Fecko
+      email: tomas.fecko@altfins.com
+    skip_upload: "{{ if ne .Env.WINGET_PUBLISH \"1\" }}true{{ else }}false{{ end }}"

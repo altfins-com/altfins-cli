@@ -47,12 +47,32 @@ README should describe this generically:
 
 Avoid hardcoding archive filenames in README unless artifact naming is intentionally frozen.
 
+## Prepared But Not Yet Public
+
+### Winget
+
+The repo now includes a `winget` release configuration in `.goreleaser.yml`, but public README onboarding should still wait until the first package is merged into `microsoft/winget-pkgs`.
+
+Target public install command after publication:
+
+```powershell
+winget install --id altfins.af -e --source winget
+```
+
+The `winget` path is intentionally opt-in on release:
+
+- default releases keep `winget` upload disabled
+- set `WINGET_PUBLISH=1` to generate manifests, push to a fork of `winget-pkgs`, and open a draft PR
+- optionally set `WINGET_OWNER` if the fork owner is not the authenticated GitHub user
+
+See [docs/winget.md](winget.md) for the exact flow.
+
 ## Deferred Channels
 
 Scoop and Winget are intentionally not part of the current public README until they are actually published and verified.
 
 If either channel is added later:
 
-1. add or restore the GoReleaser config
+1. publish and verify the channel
 2. verify the install flow from a clean environment
 3. update README and this document in the same change
