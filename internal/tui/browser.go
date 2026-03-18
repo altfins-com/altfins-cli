@@ -14,6 +14,8 @@ import (
 	"github.com/altfins-com/altfins-cli/internal/altfins"
 )
 
+const lazyLoadThreshold = 10
+
 type Dependencies struct {
 	Client     *altfins.Client
 	AuthSource string
@@ -40,14 +42,28 @@ type browserItem struct {
 	filterValue string
 	symbol      string
 	details     map[string]string
+	pageNumber  int
 }
 
 func (i browserItem) Title() string       { return i.title }
 func (i browserItem) Description() string { return i.description }
 func (i browserItem) FilterValue() string { return i.filterValue }
 
-type itemsMsg struct {
-	items []browserItem
+type browserPage struct {
+	Items            []browserItem
+	Page             int
+	TotalPages       int
+	TotalElements    int64
+	NumberOfElements int
+	First            bool
+	Last             bool
+}
+
+type pageMsg struct {
+	generation    int
+	requestedPage int
+	result        browserPage
+	err           error
 }
 
 type quotaMsg struct {
@@ -60,11 +76,7 @@ type chartMsg struct {
 	state chartState
 }
 
-type errMsg struct {
-	err error
-}
-
-type loadFn func(context.Context, *altfins.Client, map[string]any) ([]browserItem, error)
+type loadFn func(context.Context, *altfins.Client, map[string]any, altfins.Paging) (browserPage, error)
 
 type browserModel struct {
 	title                 string
@@ -90,6 +102,19 @@ type browserModel struct {
 	zoomRestoreDetailOnly bool
 	charts                map[string]chartState
 	chartLoading          map[string]bool
+
+	generation           int
+	items                []browserItem
+	loadedPages          map[int]bool
+	pageStarts           map[int]int
+	nextPage             int
+	totalPages           int
+	totalElements        int64
+	loadingPage          int
+	incrementalLoading   bool
+	incrementalError     error
+	incrementalErrorPage int
+	pendingJumpPage      int
 }
 
 func newBrowserModel(title string, deps *Dependencies, loader loadFn, chartCfg chartConfig) browserModel {
@@ -100,8 +125,8 @@ func newBrowserModel(title string, deps *Dependencies, loader loadFn, chartCfg c
 	listModel.Title = title
 	listModel.SetFilteringEnabled(true)
 	listModel.SetShowHelp(false)
-	listModel.SetShowStatusBar(true)
-	listModel.SetShowPagination(true)
+	listModel.SetShowStatusBar(false)
+	listModel.SetShowPagination(false)
 
 	defaultIndex := chartCfg.DefaultIndex
 	if defaultIndex < 0 || defaultIndex >= len(chartCfg.Presets) {
@@ -109,25 +134,32 @@ func newBrowserModel(title string, deps *Dependencies, loader loadFn, chartCfg c
 	}
 
 	return browserModel{
-		title:            title,
-		client:           deps.Client,
-		authSource:       deps.AuthSource,
-		filter:           deps.Filter,
-		filterJSON:       deps.FilterJSON,
-		load:             loader,
-		list:             listModel,
-		loading:          true,
-		focus:            "list",
-		chartConfig:      chartCfg,
-		chartMode:        chartModeCandles,
-		chartPresetIndex: defaultIndex,
-		charts:           map[string]chartState{},
-		chartLoading:     map[string]bool{},
+		title:                title,
+		client:               deps.Client,
+		authSource:           deps.AuthSource,
+		filter:               deps.Filter,
+		filterJSON:           deps.FilterJSON,
+		load:                 loader,
+		list:                 listModel,
+		loading:              true,
+		focus:                "list",
+		chartConfig:          chartCfg,
+		chartMode:            chartModeCandles,
+		chartPresetIndex:     defaultIndex,
+		charts:               map[string]chartState{},
+		chartLoading:         map[string]bool{},
+		generation:           1,
+		loadedPages:          map[int]bool{},
+		pageStarts:           map[int]int{},
+		nextPage:             0,
+		loadingPage:          0,
+		incrementalErrorPage: -1,
+		pendingJumpPage:      -1,
 	}
 }
 
 func (m browserModel) Init() tea.Cmd {
-	return tea.Batch(m.loadCmd(), m.quotaCmd())
+	return tea.Batch(m.loadPageCmd(0), m.quotaCmd())
 }
 
 func (m browserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -137,16 +169,8 @@ func (m browserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 		m.resize()
 		return m, nil
-	case itemsMsg:
-		items := make([]list.Item, 0, len(msg.items))
-		for _, item := range msg.items {
-			items = append(items, item)
-		}
-		m.list.SetItems(items)
-		m.loading = false
-		m.err = nil
-		m.lastRefresh = time.Now()
-		return m, m.loadChartForSelection()
+	case pageMsg:
+		return m.handlePageMsg(msg)
 	case quotaMsg:
 		if msg.err == nil {
 			m.quota = msg.quota
@@ -156,84 +180,101 @@ func (m browserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		delete(m.chartLoading, msg.key)
 		m.charts[msg.key] = msg.state
 		return m, nil
-	case errMsg:
-		m.loading = false
-		m.err = msg.err
-		return m, nil
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c", "q":
+		if msg.Type == tea.KeyCtrlC {
 			return m, tea.Quit
-		case "r":
-			m.loading = true
-			m.err = nil
-			m.charts = map[string]chartState{}
-			m.chartLoading = map[string]bool{}
-			return m, tea.Batch(m.loadCmd(), m.quotaCmd())
-		case "tab":
-			if m.focus == "list" {
-				m.focus = "detail"
-			} else {
-				m.focus = "list"
-			}
-			return m, nil
-		case "f":
-			m.showFilter = !m.showFilter
-			return m, nil
-		case "enter":
-			if m.selected() != nil {
-				m.detailOnly = true
-			}
-			return m, nil
-		case "z":
-			if !m.chartConfig.Enabled || m.selected() == nil || m.selected().symbol == "" {
+		}
+		if !m.list.SettingFilter() {
+			switch msg.String() {
+			case "q":
+				return m, tea.Quit
+			case "r":
+				m.generation++
+				m.resetPageState()
+				m.loading = true
+				m.err = nil
+				m.loadingPage = 0
+				m.charts = map[string]chartState{}
+				m.chartLoading = map[string]bool{}
+				return m, tea.Batch(m.loadPageCmd(0), m.quotaCmd())
+			case "n":
+				return m, m.startPageLoad(m.nextPage, true)
+			case "p":
+				if m.jumpToPreviousLoadedPage() {
+					return m, m.loadChartForSelection()
+				}
 				return m, nil
-			}
-			if m.chartZoom {
-				m.chartZoom = false
-				m.detailOnly = m.zoomRestoreDetailOnly
-			} else {
-				m.zoomRestoreDetailOnly = m.detailOnly
-				m.detailOnly = true
-				m.chartZoom = true
-			}
-			return m, m.loadChartForSelection()
-		case "c":
-			if !m.chartConfig.Enabled {
+			case "tab":
+				if m.focus == "list" {
+					m.focus = "detail"
+				} else {
+					m.focus = "list"
+				}
 				return m, nil
-			}
-			if m.chartMode == chartModeCandles {
-				m.chartMode = chartModeBraille
-			} else {
-				m.chartMode = chartModeCandles
-			}
-			return m, nil
-		case "i":
-			if !m.chartConfig.Enabled || len(m.chartConfig.Presets) == 0 {
+			case "f":
+				m.showFilter = !m.showFilter
 				return m, nil
-			}
-			m.chartPresetIndex = (m.chartPresetIndex + 1) % len(m.chartConfig.Presets)
-			return m, m.loadChartForSelection()
-		case "esc", "backspace":
-			if m.chartZoom {
-				m.chartZoom = false
-				m.detailOnly = m.zoomRestoreDetailOnly
+			case "enter":
+				if m.selected() != nil {
+					m.detailOnly = true
+				}
 				return m, nil
-			}
-			if m.detailOnly {
-				m.detailOnly = false
+			case "z":
+				if !m.chartConfig.Enabled || m.selected() == nil || m.selected().symbol == "" {
+					return m, nil
+				}
+				if m.chartZoom {
+					m.chartZoom = false
+					m.detailOnly = m.zoomRestoreDetailOnly
+				} else {
+					m.zoomRestoreDetailOnly = m.detailOnly
+					m.detailOnly = true
+					m.chartZoom = true
+				}
+				return m, m.loadChartForSelection()
+			case "c":
+				if !m.chartConfig.Enabled {
+					return m, nil
+				}
+				if m.chartMode == chartModeCandles {
+					m.chartMode = chartModeBraille
+				} else {
+					m.chartMode = chartModeCandles
+				}
 				return m, nil
+			case "i":
+				if !m.chartConfig.Enabled || len(m.chartConfig.Presets) == 0 {
+					return m, nil
+				}
+				m.chartPresetIndex = (m.chartPresetIndex + 1) % len(m.chartConfig.Presets)
+				return m, m.loadChartForSelection()
+			case "esc", "backspace":
+				if m.chartZoom {
+					m.chartZoom = false
+					m.detailOnly = m.zoomRestoreDetailOnly
+					return m, nil
+				}
+				if m.detailOnly {
+					m.detailOnly = false
+					return m, nil
+				}
 			}
 		}
 	}
 
-	beforeIndex := m.list.Index()
+	beforeSelection := m.selectedKey()
 	var cmd tea.Cmd
 	m.list, cmd = m.list.Update(msg)
-	if m.list.Index() != beforeIndex {
-		return m, tea.Batch(cmd, m.loadChartForSelection())
+	afterSelection := m.selectedKey()
+
+	cmds := []tea.Cmd{cmd}
+	if beforeSelection != afterSelection {
+		cmds = append(cmds, m.loadChartForSelection())
+		if autoCmd := m.autoLoadCmd(); autoCmd != nil {
+			cmds = append(cmds, autoCmd)
+		}
 	}
-	return m, cmd
+	return m, batchCmds(cmds...)
 }
 
 func (m browserModel) View() string {
@@ -443,20 +484,152 @@ func (m browserModel) selected() *browserItem {
 	return &item
 }
 
-func (m browserModel) loadCmd() tea.Cmd {
-	return func() tea.Msg {
-		items, err := m.load(context.Background(), m.client, m.filter)
-		if err != nil {
-			return errMsg{err: err}
-		}
-		return itemsMsg{items: items}
+func (m browserModel) selectedKey() string {
+	selected := m.selected()
+	if selected == nil {
+		return ""
 	}
+	return fmt.Sprintf("%d|%s|%s", selected.pageNumber, selected.symbol, selected.title)
 }
 
 func (m browserModel) quotaCmd() tea.Cmd {
 	return func() tea.Msg {
 		quota, err := m.client.AllAvailablePermits(context.Background())
 		return quotaMsg{quota: quota, err: err}
+	}
+}
+
+func (m *browserModel) loadPageCmd(page int) tea.Cmd {
+	generation := m.generation
+	return func() tea.Msg {
+		result, err := m.load(context.Background(), m.client, m.filter, altfins.Paging{
+			Page: page,
+			Size: tuiAPIPageSize,
+		})
+		return pageMsg{
+			generation:    generation,
+			requestedPage: page,
+			result:        result,
+			err:           err,
+		}
+	}
+}
+
+func (m browserModel) handlePageMsg(msg pageMsg) (tea.Model, tea.Cmd) {
+	if msg.generation != m.generation {
+		return m, nil
+	}
+
+	isInitialLoad := msg.requestedPage == 0 && len(m.items) == 0
+	m.loadingPage = -1
+
+	if msg.err != nil {
+		if isInitialLoad {
+			m.loading = false
+			m.err = msg.err
+		} else {
+			m.incrementalLoading = false
+			m.incrementalError = msg.err
+			m.incrementalErrorPage = msg.requestedPage
+			if m.pendingJumpPage == msg.requestedPage {
+				m.pendingJumpPage = -1
+			}
+		}
+		return m, nil
+	}
+
+	m.loading = false
+	m.err = nil
+	m.incrementalLoading = false
+	m.incrementalError = nil
+	m.incrementalErrorPage = -1
+	if m.loadedPages[msg.result.Page] {
+		return m, nil
+	}
+
+	m.appendPage(msg.result)
+	m.syncListItems()
+
+	selectionChanged := false
+	if isInitialLoad {
+		m.list.ResetSelected()
+		selectionChanged = true
+	}
+	if m.pendingJumpPage >= 0 {
+		if m.jumpToPage(m.pendingJumpPage) {
+			selectionChanged = true
+		}
+		m.pendingJumpPage = -1
+	}
+
+	if selectionChanged {
+		return m, m.loadChartForSelection()
+	}
+	return m, nil
+}
+
+func (m *browserModel) startPageLoad(page int, jump bool) tea.Cmd {
+	if page < 0 || m.loadingPage >= 0 {
+		return nil
+	}
+	if m.loadedPages[page] {
+		return nil
+	}
+	if m.totalPages > 0 && page >= m.totalPages {
+		return nil
+	}
+
+	if len(m.items) == 0 && page == 0 {
+		m.loading = true
+	} else {
+		m.incrementalLoading = true
+	}
+	m.incrementalError = nil
+	m.incrementalErrorPage = -1
+	m.loadingPage = page
+	if jump {
+		m.pendingJumpPage = page
+	}
+	return m.loadPageCmd(page)
+}
+
+func (m *browserModel) appendPage(page browserPage) {
+	start := len(m.items)
+	items := make([]browserItem, 0, len(page.Items))
+	for _, item := range page.Items {
+		item.pageNumber = page.Page
+		items = append(items, item)
+	}
+
+	m.items = append(m.items, items...)
+	m.loadedPages[page.Page] = true
+	m.pageStarts[page.Page] = start
+	m.totalPages = page.TotalPages
+	m.totalElements = page.TotalElements
+
+	switch {
+	case page.Last:
+		m.nextPage = -1
+	case page.TotalPages == 0:
+		m.nextPage = -1
+	case page.Page+1 >= page.TotalPages:
+		m.nextPage = -1
+	default:
+		m.nextPage = page.Page + 1
+	}
+}
+
+func (m *browserModel) syncListItems() {
+	items := make([]list.Item, 0, len(m.items))
+	for _, item := range m.items {
+		items = append(items, item)
+	}
+	if cmd := m.list.SetItems(items); cmd != nil {
+		if msg := cmd(); msg != nil {
+			var next tea.Cmd
+			m.list, next = m.list.Update(msg)
+			_ = next
+		}
 	}
 }
 
@@ -494,6 +667,81 @@ func (m *browserModel) loadChartForSelection() tea.Cmd {
 	}
 }
 
+func (m *browserModel) autoLoadCmd() tea.Cmd {
+	if m.loading || m.incrementalLoading || m.loadingPage >= 0 || m.nextPage < 0 {
+		return nil
+	}
+	if m.hasLocalFilter() {
+		return nil
+	}
+	if len(m.items) == 0 || m.selected() == nil {
+		return nil
+	}
+	globalIndex := m.list.GlobalIndex()
+	if globalIndex < 0 {
+		return nil
+	}
+	if len(m.items)-globalIndex <= lazyLoadThreshold {
+		return m.startPageLoad(m.nextPage, false)
+	}
+	return nil
+}
+
+func (m *browserModel) jumpToPreviousLoadedPage() bool {
+	selected := m.selected()
+	if selected == nil {
+		return false
+	}
+	if selected.pageNumber <= 0 {
+		return false
+	}
+	return m.jumpToPage(selected.pageNumber - 1)
+}
+
+func (m *browserModel) jumpToPage(page int) bool {
+	if page < 0 {
+		return false
+	}
+	if !m.loadedPages[page] {
+		return false
+	}
+	if !m.hasLocalFilter() {
+		start, ok := m.pageStarts[page]
+		if !ok {
+			return false
+		}
+		m.list.Select(start)
+		return true
+	}
+	for index, item := range m.list.VisibleItems() {
+		typed, ok := item.(browserItem)
+		if !ok {
+			continue
+		}
+		if typed.pageNumber == page {
+			m.list.Select(index)
+			return true
+		}
+	}
+	return false
+}
+
+func (m *browserModel) resetPageState() {
+	m.items = nil
+	m.loadedPages = map[int]bool{}
+	m.pageStarts = map[int]int{}
+	m.nextPage = 0
+	m.totalPages = 0
+	m.totalElements = 0
+	m.loadingPage = -1
+	m.incrementalLoading = false
+	m.incrementalError = nil
+	m.incrementalErrorPage = -1
+	m.pendingJumpPage = -1
+	m.list.ResetSelected()
+	m.syncListItems()
+}
+
 func (m *browserModel) resize() {
 	height := m.height - 4
 	if height < 10 {
@@ -514,16 +762,32 @@ func (m browserModel) statusLine() string {
 	parts := []string{
 		"j/k or arrows move",
 		"/ search",
+		"n next api page",
+		"p prev api page",
 		"Enter detail",
 		"Esc back",
 		"Tab focus",
 		"f filter",
-		"z zoom",
-		"c chart mode",
-		"i interval",
-		"r refresh",
-		fmt.Sprintf("permits %d/%d", m.quota.AvailablePermits, m.quota.MonthlyAvailablePermits),
 	}
+	if m.chartConfig.Enabled {
+		parts = append(parts, "z zoom", "c chart mode", "i interval")
+	}
+	parts = append(parts,
+		"r refresh",
+		m.loadedStatus(),
+		m.apiPageStatus(),
+	)
+	if m.hasLocalFilter() {
+		parts = append(parts, "searching loaded rows only")
+	}
+	if m.incrementalLoading && m.loadingPage >= 0 {
+		totalPages := max(1, m.totalPages)
+		parts = append(parts, fmt.Sprintf("loading page %d/%d", m.loadingPage+1, totalPages))
+	}
+	if m.incrementalError != nil && m.incrementalErrorPage >= 0 {
+		parts = append(parts, fmt.Sprintf("page %d load failed", m.incrementalErrorPage+1))
+	}
+	parts = append(parts, fmt.Sprintf("permits %d/%d", m.quota.AvailablePermits, m.quota.MonthlyAvailablePermits))
 	if m.chartConfig.Enabled {
 		preset := m.activeChartPreset()
 		if preset.Interval != "" {
@@ -538,6 +802,30 @@ func (m browserModel) statusLine() string {
 		parts = append(parts, "auth "+m.authSource)
 	}
 	return strings.Join(parts, "  |  ")
+}
+
+func (m browserModel) loadedStatus() string {
+	return fmt.Sprintf("loaded %d/%d", len(m.items), m.totalElements)
+}
+
+func (m browserModel) apiPageStatus() string {
+	totalPages := m.totalPages
+	if totalPages == 0 && (m.loading || m.loadingPage >= 0) {
+		totalPages = 1
+	}
+	currentPage := 0
+	if selected := m.selected(); selected != nil {
+		currentPage = selected.pageNumber + 1
+	} else if m.loadingPage >= 0 {
+		currentPage = m.loadingPage + 1
+	} else if len(m.loadedPages) > 0 {
+		currentPage = len(m.loadedPages)
+	}
+	return fmt.Sprintf("api page %d/%d", currentPage, totalPages)
+}
+
+func (m browserModel) hasLocalFilter() bool {
+	return m.list.FilterState() != list.Unfiltered
 }
 
 func (m browserModel) activeChartPreset() chartPreset {
@@ -585,6 +873,23 @@ func (m browserModel) currentRenderedChart(width, height int) renderedChart {
 
 func chartCacheKey(symbol string, preset chartPreset) string {
 	return fmt.Sprintf("%s|%s|%d", strings.ToUpper(strings.TrimSpace(symbol)), preset.Interval, preset.Bars)
+}
+
+func batchCmds(cmds ...tea.Cmd) tea.Cmd {
+	nonNil := make([]tea.Cmd, 0, len(cmds))
+	for _, cmd := range cmds {
+		if cmd != nil {
+			nonNil = append(nonNil, cmd)
+		}
+	}
+	switch len(nonNil) {
+	case 0:
+		return nil
+	case 1:
+		return nonNil[0]
+	default:
+		return tea.Batch(nonNil...)
+	}
 }
 
 func max(a, b int) int {

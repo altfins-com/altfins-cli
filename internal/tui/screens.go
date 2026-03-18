@@ -9,6 +9,8 @@ import (
 	"github.com/altfins-com/altfins-cli/internal/altfins"
 )
 
+const tuiAPIPageSize = 50
+
 func NewMarketsScreen(deps *Dependencies) (Runner, error) {
 	model := newBrowserModel("altFINS Markets", deps, loadMarkets, chartConfig{
 		Enabled: true,
@@ -53,15 +55,16 @@ func NewNewsScreen(deps *Dependencies) (Runner, error) {
 	return runner{model: model}, nil
 }
 
-func loadMarkets(ctx context.Context, client *altfins.Client, filter map[string]any) ([]browserItem, error) {
+func loadMarkets(ctx context.Context, client *altfins.Client, filter map[string]any, paging altfins.Paging) (browserPage, error) {
 	filter = copyFilter(filter)
 	if symbol, ok := filter["symbol"].(string); ok && symbol != "" {
 		filter["symbols"] = []string{symbol}
 		delete(filter, "symbol")
 	}
-	page, err := client.MarketsSearch(ctx, altfins.Paging{Size: 50}, filter)
+	paging.Size = resolveTUIPageSize(paging.Size)
+	page, err := client.MarketsSearch(ctx, paging, filter)
 	if err != nil {
-		return nil, err
+		return browserPage{}, err
 	}
 	items := make([]browserItem, 0, len(page.Content))
 	for _, item := range page.Content {
@@ -86,18 +89,19 @@ func loadMarkets(ctx context.Context, client *altfins.Client, filter map[string]
 			details:     details,
 		})
 	}
-	return items, nil
+	return browserPageFrom(page, items), nil
 }
 
-func loadSignals(ctx context.Context, client *altfins.Client, filter map[string]any) ([]browserItem, error) {
+func loadSignals(ctx context.Context, client *altfins.Client, filter map[string]any, paging altfins.Paging) (browserPage, error) {
 	filter = copyFilter(filter)
 	if symbol, ok := filter["symbol"].(string); ok && symbol != "" {
 		filter["symbols"] = []string{symbol}
 		delete(filter, "symbol")
 	}
-	page, err := client.SignalsSearch(ctx, altfins.Paging{Size: 50}, filter)
+	paging.Size = resolveTUIPageSize(paging.Size)
+	page, err := client.SignalsSearch(ctx, paging, filter)
 	if err != nil {
-		return nil, err
+		return browserPage{}, err
 	}
 	items := make([]browserItem, 0, len(page.Content))
 	for _, item := range page.Content {
@@ -119,14 +123,15 @@ func loadSignals(ctx context.Context, client *altfins.Client, filter map[string]
 			},
 		})
 	}
-	return items, nil
+	return browserPageFrom(page, items), nil
 }
 
-func loadTechnicalAnalysis(ctx context.Context, client *altfins.Client, filter map[string]any) ([]browserItem, error) {
+func loadTechnicalAnalysis(ctx context.Context, client *altfins.Client, filter map[string]any, paging altfins.Paging) (browserPage, error) {
+	paging.Size = resolveTUIPageSize(paging.Size)
 	symbol, _ := filter["symbol"].(string)
-	page, err := client.TechnicalAnalysis(ctx, altfins.Paging{Size: 50}, symbol)
+	page, err := client.TechnicalAnalysis(ctx, paging, symbol)
 	if err != nil {
-		return nil, err
+		return browserPage{}, err
 	}
 	items := make([]browserItem, 0, len(page.Content))
 	for _, item := range page.Content {
@@ -149,13 +154,14 @@ func loadTechnicalAnalysis(ctx context.Context, client *altfins.Client, filter m
 			},
 		})
 	}
-	return items, nil
+	return browserPageFrom(page, items), nil
 }
 
-func loadNews(ctx context.Context, client *altfins.Client, filter map[string]any) ([]browserItem, error) {
-	page, err := client.NewsSearch(ctx, altfins.Paging{Size: 50}, filter)
+func loadNews(ctx context.Context, client *altfins.Client, filter map[string]any, paging altfins.Paging) (browserPage, error) {
+	paging.Size = resolveTUIPageSize(paging.Size)
+	page, err := client.NewsSearch(ctx, paging, filter)
 	if err != nil {
-		return nil, err
+		return browserPage{}, err
 	}
 	items := make([]browserItem, 0, len(page.Content))
 	for _, item := range page.Content {
@@ -173,10 +179,29 @@ func loadNews(ctx context.Context, client *altfins.Client, filter map[string]any
 			},
 		})
 	}
-	return items, nil
+	return browserPageFrom(page, items), nil
 }
 
 const timeLayout = "2006-01-02 15:04:05 MST"
+
+func browserPageFrom[T any](page altfins.Page[T], items []browserItem) browserPage {
+	return browserPage{
+		Items:            items,
+		Page:             page.Number,
+		TotalPages:       page.TotalPages,
+		TotalElements:    page.TotalElements,
+		NumberOfElements: page.NumberOfElements,
+		First:            page.First,
+		Last:             page.Last,
+	}
+}
+
+func resolveTUIPageSize(size int) int {
+	if size > 0 {
+		return size
+	}
+	return tuiAPIPageSize
+}
 
 func copyFilter(in map[string]any) map[string]any {
 	out := make(map[string]any, len(in))

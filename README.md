@@ -158,6 +158,8 @@ Keyboard controls:
 ```text
 j / k or arrows  Move selection
 /                Filter the current list
+n                Load the next API page
+p                Jump to the previous loaded API page
 Enter            Open detail mode
 Esc              Return to the list
 Tab              Switch focus
@@ -172,6 +174,9 @@ q                Quit
 The current TUI layout includes:
 
 - A left-side browser for lists and search
+- Real API pagination with lazy loading as you approach the end of loaded rows
+- Explicit next/previous API page actions for faster navigation through large result sets
+- Local `/` search over loaded rows only, with loaded/total counters in the footer
 - A chart-first detail pane for markets, signals, and technical analysis
 - Green/red OHLC candles with a braille fallback when the pane is narrow
 - A dedicated chart zoom mode for the selected asset
@@ -193,6 +198,12 @@ O 70000  H 71450  L 69210  C 70980  @ 2026-03-18 00:00 UTC
 69210 ┤ │  │  ██  │
       └────────────────
         03/01   03/10   03/18
+```
+
+Example pagination status:
+
+```text
+loaded 150/1248  |  api page 3/25  |  searching loaded rows only
 ```
 
 ## Common Workflows
