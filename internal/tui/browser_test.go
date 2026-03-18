@@ -307,6 +307,55 @@ func TestIncrementalPageErrorKeepsLoadedRows(t *testing.T) {
 	}
 }
 
+func TestQuotaErrorShowsUnavailableStatus(t *testing.T) {
+	model, _ := newTestBrowserModel(nil, nil)
+
+	updated, _ := model.Update(quotaMsg{err: errors.New("quota failed")})
+	m := updated.(browserModel)
+
+	if m.quotaErr == nil {
+		t.Fatal("expected quota error to be recorded")
+	}
+	if got := m.statusLine(); !strings.Contains(got, "quota unavailable") {
+		t.Fatalf("expected quota unavailable status, got %q", got)
+	}
+}
+
+func TestSuccessfulPageLoadUpdatesLastRefresh(t *testing.T) {
+	model, _ := newTestBrowserModel(nil, nil)
+
+	updated, _ := model.Update(testPageMsg(model.generation, 0, 1, 1, testBrowserItem("BTC", "Bitcoin")))
+	m := updated.(browserModel)
+
+	if m.lastRefresh.IsZero() {
+		t.Fatal("expected successful page load to set last refresh timestamp")
+	}
+}
+
+func TestChartLoadRetriesAfterCachedError(t *testing.T) {
+	model, _ := newTestBrowserModel(nil, nil)
+	model.client = altfins.NewClient(altfins.ClientConfig{DryRun: true})
+	model.width = 120
+	model.height = 40
+	model.resize()
+
+	updated, _ := model.Update(testPageMsg(model.generation, 0, 1, 1, testBrowserItem("BTC", "Bitcoin")))
+	m := updated.(browserModel)
+
+	preset := m.activeChartPreset()
+	key := chartCacheKey("BTC", preset)
+	m.charts[key] = chartState{Symbol: "BTC", Interval: preset.Interval, Bars: preset.Bars, Err: errors.New("boom")}
+	m.chartLoading = map[string]bool{}
+
+	cmd := m.loadChartForSelection()
+	if cmd == nil {
+		t.Fatal("expected retry command for cached chart error")
+	}
+	if _, ok := m.charts[key]; ok {
+		t.Fatal("expected cached error state to be cleared before retry")
+	}
+}
+
 func TestChartCacheKeySeparatesIntervals(t *testing.T) {
 	hourly := chartCacheKey("btc", chartPreset{Interval: "HOURLY", Bars: 48})
 	daily := chartCacheKey("BTC", chartPreset{Interval: "DAILY", Bars: 30})

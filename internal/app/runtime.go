@@ -61,7 +61,7 @@ func (f *Factory) NewClient() (*altfins.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !resolved.HasAPIKey {
+	if !resolved.HasAPIKey && !f.Options.DryRun {
 		return nil, &AuthRequiredError{Message: "altFINS API key not configured. Run `af auth set` or export ALTFINS_API_KEY."}
 	}
 	return altfins.NewClient(altfins.ClientConfig{

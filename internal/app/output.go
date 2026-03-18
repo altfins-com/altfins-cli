@@ -27,11 +27,15 @@ func WriteOutput(w io.Writer, data any, format string, fields []string) error {
 		}
 		return writeTable(w, tabular)
 	case "json":
+		projected, err := projectJSONOutput(data, fields)
+		if err != nil {
+			return err
+		}
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
-		return enc.Encode(data)
+		return enc.Encode(projected)
 	case "jsonl":
-		return writeJSONL(w, data)
+		return writeJSONL(w, data, fields)
 	case "csv":
 		tabular, err := toTableData(data, fields)
 		if err != nil {
@@ -43,8 +47,11 @@ func WriteOutput(w io.Writer, data any, format string, fields []string) error {
 	}
 }
 
-func writeJSONL(w io.Writer, data any) error {
-	items := toJSONItems(data)
+func writeJSONL(w io.Writer, data any, fields []string) error {
+	items, err := projectJSONItems(data, fields)
+	if err != nil {
+		return err
+	}
 	enc := json.NewEncoder(w)
 	for _, item := range items {
 		if err := enc.Encode(item); err != nil {
@@ -162,7 +169,7 @@ func toTableData(data any, fields []string) (tableData, error) {
 	case altfins.PermitsInfo:
 		return projectTable(tableData{
 			Headers: []string{"availablePermits", "monthlyAvailablePermits"},
-			Rows: [][]string{{fmt.Sprintf("%d", value.AvailablePermits), fmt.Sprintf("%d", value.MonthlyAvailablePermits)}},
+			Rows:    [][]string{{fmt.Sprintf("%d", value.AvailablePermits), fmt.Sprintf("%d", value.MonthlyAvailablePermits)}},
 		}, fields), nil
 	case altfins.Page[altfins.ScreenerSearchResult]:
 		return tabularScreenerPage(value, fields), nil
@@ -198,7 +205,7 @@ func toTableData(data any, fields []string) (tableData, error) {
 	case altfins.NewsSummary:
 		return projectTable(tableData{
 			Headers: []string{"messageId", "sourceId", "timestamp", "sourceName", "title", "url", "content"},
-			Rows: [][]string{{fmt.Sprintf("%d", value.MessageID), fmt.Sprintf("%d", value.SourceID), value.Timestamp.Format(time.RFC3339), value.SourceName, value.Title, value.URL, value.Content}},
+			Rows:    [][]string{{fmt.Sprintf("%d", value.MessageID), fmt.Sprintf("%d", value.SourceID), value.Timestamp.Format(time.RFC3339), value.SourceName, value.Title, value.URL, value.Content}},
 		}, fields), nil
 	case []altfins.OHLCVData:
 		return ohlcvRows(value, fields), nil
@@ -363,6 +370,135 @@ func stringify(value any) string {
 		}
 		return string(payload)
 	}
+}
+
+func projectJSONOutput(data any, fields []string) (any, error) {
+	if len(fields) == 0 {
+		return data, nil
+	}
+
+	switch value := data.(type) {
+	case altfins.Page[altfins.ScreenerSearchResult],
+		altfins.Page[altfins.SignalFeedItem],
+		altfins.Page[altfins.NewsSummary],
+		altfins.Page[altfins.OHLCVData],
+		altfins.Page[altfins.AnalyticsHistoryData],
+		altfins.Page[altfins.TechnicalAnalysisSummary]:
+		generic, err := normalizeJSONValue(value)
+		if err != nil {
+			return nil, err
+		}
+		page, ok := generic.(map[string]any)
+		if !ok {
+			return generic, nil
+		}
+		content, ok := page["content"].([]any)
+		if !ok {
+			return page, nil
+		}
+		projected := cloneMap(page)
+		projected["content"] = projectJSONArray(content, fields)
+		return projected, nil
+	default:
+		generic, err := normalizeJSONValue(value)
+		if err != nil {
+			return nil, err
+		}
+		return projectJSONAny(generic, fields), nil
+	}
+}
+
+func projectJSONItems(data any, fields []string) ([]any, error) {
+	items := toJSONItems(data)
+	if len(fields) == 0 {
+		return items, nil
+	}
+
+	projected := make([]any, 0, len(items))
+	for _, item := range items {
+		generic, err := normalizeJSONValue(item)
+		if err != nil {
+			return nil, err
+		}
+		projected = append(projected, projectJSONAny(generic, fields))
+	}
+	return projected, nil
+}
+
+func normalizeJSONValue(data any) (any, error) {
+	payload, err := json.Marshal(data)
+	if err != nil {
+		return nil, fmt.Errorf("normalize json output: %w", err)
+	}
+	var generic any
+	if err := json.Unmarshal(payload, &generic); err != nil {
+		return nil, fmt.Errorf("decode json output: %w", err)
+	}
+	return generic, nil
+}
+
+func projectJSONAny(value any, fields []string) any {
+	switch typed := value.(type) {
+	case map[string]any:
+		return projectJSONObject(typed, fields)
+	case []any:
+		return projectJSONArray(typed, fields)
+	default:
+		if len(fields) == 1 && fields[0] == "value" {
+			return map[string]any{"value": typed}
+		}
+		return typed
+	}
+}
+
+func projectJSONArray(items []any, fields []string) []any {
+	projected := make([]any, 0, len(items))
+	for _, item := range items {
+		projected = append(projected, projectJSONAny(item, fields))
+	}
+	return projected
+}
+
+func projectJSONObject(item map[string]any, fields []string) map[string]any {
+	flattened := flattenJSONObject(item)
+	if len(fields) == 0 {
+		return flattened
+	}
+
+	projected := make(map[string]any, len(fields))
+	matched := false
+	for _, field := range fields {
+		if value, ok := flattened[field]; ok {
+			projected[field] = value
+			matched = true
+		}
+	}
+	if matched {
+		return projected
+	}
+	return flattened
+}
+
+func flattenJSONObject(item map[string]any) map[string]any {
+	flattened := cloneMap(item)
+	additional, ok := flattened["additionalData"].(map[string]any)
+	if !ok {
+		return flattened
+	}
+	for key, value := range additional {
+		if _, exists := flattened[key]; !exists {
+			flattened[key] = value
+		}
+	}
+	return flattened
+}
+
+func cloneMap(in map[string]any) map[string]any {
+	out := make(map[string]any, len(in))
+	for key, value := range in {
+		out[key] = value
+	}
+	return out
 }
 
 func toAnySlice[T any](items []T) []any {

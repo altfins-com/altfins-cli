@@ -89,6 +89,7 @@ type browserModel struct {
 	loading               bool
 	err                   error
 	quota                 altfins.PermitsInfo
+	quotaErr              error
 	width                 int
 	height                int
 	showFilter            bool
@@ -174,6 +175,9 @@ func (m browserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case quotaMsg:
 		if msg.err == nil {
 			m.quota = msg.quota
+			m.quotaErr = nil
+		} else {
+			m.quotaErr = msg.err
 		}
 		return m, nil
 	case chartMsg:
@@ -193,6 +197,7 @@ func (m browserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.resetPageState()
 				m.loading = true
 				m.err = nil
+				m.quotaErr = nil
 				m.loadingPage = 0
 				m.charts = map[string]chartState{}
 				m.chartLoading = map[string]bool{}
@@ -548,6 +553,7 @@ func (m browserModel) handlePageMsg(msg pageMsg) (tea.Model, tea.Cmd) {
 	}
 
 	m.appendPage(msg.result)
+	m.lastRefresh = time.Now()
 	m.syncListItems()
 
 	selectionChanged := false
@@ -646,8 +652,11 @@ func (m *browserModel) loadChartForSelection() tea.Cmd {
 		return nil
 	}
 	key := chartCacheKey(selected.symbol, preset)
-	if _, ok := m.charts[key]; ok {
-		return nil
+	if state, ok := m.charts[key]; ok {
+		if state.Err == nil {
+			return nil
+		}
+		delete(m.charts, key)
 	}
 	if m.chartLoading[key] {
 		return nil
@@ -738,6 +747,7 @@ func (m *browserModel) resetPageState() {
 	m.incrementalError = nil
 	m.incrementalErrorPage = -1
 	m.pendingJumpPage = -1
+	m.lastRefresh = time.Time{}
 	m.list.ResetSelected()
 	m.syncListItems()
 }
@@ -787,7 +797,11 @@ func (m browserModel) statusLine() string {
 	if m.incrementalError != nil && m.incrementalErrorPage >= 0 {
 		parts = append(parts, fmt.Sprintf("page %d load failed", m.incrementalErrorPage+1))
 	}
-	parts = append(parts, fmt.Sprintf("permits %d/%d", m.quota.AvailablePermits, m.quota.MonthlyAvailablePermits))
+	if m.quotaErr != nil {
+		parts = append(parts, "quota unavailable")
+	} else {
+		parts = append(parts, fmt.Sprintf("permits %d/%d", m.quota.AvailablePermits, m.quota.MonthlyAvailablePermits))
+	}
 	if m.chartConfig.Enabled {
 		preset := m.activeChartPreset()
 		if preset.Interval != "" {
