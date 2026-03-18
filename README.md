@@ -25,7 +25,7 @@ Terminal-native crypto market intelligence for traders, analysts, and AI agents.
 
 ## Install
 
-Pick the setup that matches your machine. On macOS, Homebrew is the recommended path. On Linux and Windows, download the latest single-binary release and start with `af auth set`.
+Pick the setup that matches your machine. Homebrew is the recommended path on macOS and Linux. On Windows, the simplest path is the native `.zip` release, with WSL + Homebrew as an optional setup for users who already work inside Linux terminals.
 
 ### macOS
 
@@ -51,7 +51,20 @@ af auth status
 
 ### Linux
 
-Download the latest release from [GitHub Releases](https://github.com/altfins-com/altfins-cli/releases).
+Recommended install:
+
+```bash
+brew install altfins-com/tap/af
+```
+
+Then verify the install:
+
+```bash
+af auth set
+af auth status
+```
+
+If you prefer a standalone binary, download the latest release from [GitHub Releases](https://github.com/altfins-com/altfins-cli/releases).
 
 Choose:
 
@@ -69,16 +82,9 @@ chmod +x ~/.local/bin/af
 
 If `~/.local/bin` is not in your `PATH`, add it or move `af` into a directory that already is, such as `/usr/local/bin`.
 
-Then verify the install:
-
-```bash
-af auth set
-af auth status
-```
-
 ### Windows
 
-Download the latest release from [GitHub Releases](https://github.com/altfins-com/altfins-cli/releases).
+For most Windows users, the easiest path is the native `.zip` release from [GitHub Releases](https://github.com/altfins-com/altfins-cli/releases).
 
 Choose:
 
@@ -103,6 +109,18 @@ Simple setup:
 Optional: add `C:\Tools\af\` to your `PATH` so you can run `af` from any folder without typing `.\af.exe`.
 
 No extra runtime or language install is required.
+
+#### Optional: WSL + Homebrew
+
+If you already use Windows Subsystem for Linux and prefer working inside Ubuntu or another Linux shell, you can install `af` there with Homebrew:
+
+```bash
+brew install altfins-com/tap/af
+af auth set
+af auth status
+```
+
+This installs `af` inside your WSL environment, not as a native Windows `af.exe` command for PowerShell or Command Prompt.
 
 ## 60-Second Quickstart
 
