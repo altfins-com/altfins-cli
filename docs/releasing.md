@@ -22,13 +22,13 @@ GoReleaser publishes a formula to the tap repository configured in `.goreleaser.
 - Tap alias: `altfins-com/tap`
 - Formula: `af`
 
-Documented install commands:
+Primary documented install command:
 
 ```bash
 brew install altfins-com/tap/af
 ```
 
-or:
+Fallback explicit tap flow:
 
 ```bash
 brew tap altfins-com/tap

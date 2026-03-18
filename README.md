@@ -26,11 +26,13 @@ Terminal-native crypto market intelligence for traders, analysts, and AI agents.
 
 ### Homebrew
 
+One-line install:
+
 ```bash
 brew install altfins-com/tap/af
 ```
 
-Or tap first, then install:
+If you prefer an explicit tap step:
 
 ```bash
 brew tap altfins-com/tap
