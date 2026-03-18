@@ -10,22 +10,46 @@ import (
 )
 
 func NewMarketsScreen(deps *Dependencies) (Runner, error) {
-	model := newBrowserModel("altFINS Markets", deps, loadMarkets)
+	model := newBrowserModel("altFINS Markets", deps, loadMarkets, chartConfig{
+		Enabled: true,
+		Presets: []chartPreset{
+			{Interval: "HOURLY", Bars: 48},
+			{Interval: "HOURS4", Bars: 42},
+			{Interval: "DAILY", Bars: 30},
+		},
+		DefaultIndex: 2,
+	})
 	return runner{model: model}, nil
 }
 
 func NewSignalsScreen(deps *Dependencies) (Runner, error) {
-	model := newBrowserModel("altFINS Signals", deps, loadSignals)
+	model := newBrowserModel("altFINS Signals", deps, loadSignals, chartConfig{
+		Enabled: true,
+		Presets: []chartPreset{
+			{Interval: "HOURLY", Bars: 48},
+			{Interval: "HOURS4", Bars: 42},
+			{Interval: "DAILY", Bars: 30},
+		},
+		DefaultIndex: 0,
+	})
 	return runner{model: model}, nil
 }
 
 func NewTechnicalAnalysisScreen(deps *Dependencies) (Runner, error) {
-	model := newBrowserModel("altFINS Technical Analysis", deps, loadTechnicalAnalysis)
+	model := newBrowserModel("altFINS Technical Analysis", deps, loadTechnicalAnalysis, chartConfig{
+		Enabled: true,
+		Presets: []chartPreset{
+			{Interval: "HOURLY", Bars: 48},
+			{Interval: "HOURS4", Bars: 42},
+			{Interval: "DAILY", Bars: 60},
+		},
+		DefaultIndex: 2,
+	})
 	return runner{model: model}, nil
 }
 
 func NewNewsScreen(deps *Dependencies) (Runner, error) {
-	model := newBrowserModel("altFINS News", deps, loadNews)
+	model := newBrowserModel("altFINS News", deps, loadNews, chartConfig{})
 	return runner{model: model}, nil
 }
 

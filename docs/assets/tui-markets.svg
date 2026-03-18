@@ -12,9 +12,9 @@
   <rect x="598" y="594" width="770" height="188" rx="18" fill="#0F1F2A" stroke="#2D505B" stroke-width="2"/>
 
   <text x="82" y="144" fill="#B8D7E3" font-family="Menlo, Monaco, Consolas, monospace" font-size="22">Markets</text>
-  <text x="624" y="144" fill="#B8F3D7" font-family="Menlo, Monaco, Consolas, monospace" font-size="22">Detail</text>
+  <text x="624" y="144" fill="#B8F3D7" font-family="Menlo, Monaco, Consolas, monospace" font-size="22">Chart</text>
   <text x="1130" y="144" fill="#A8C6FF" font-family="Menlo, Monaco, Consolas, monospace" font-size="22">Filter</text>
-  <text x="624" y="636" fill="#B8D7E3" font-family="Menlo, Monaco, Consolas, monospace" font-size="22">Footer</text>
+  <text x="624" y="636" fill="#B8D7E3" font-family="Menlo, Monaco, Consolas, monospace" font-size="22">Metadata</text>
 
   <text x="82" y="188" fill="#7FD1AE" font-family="Menlo, Monaco, Consolas, monospace" font-size="18">/ btc</text>
   <text x="82" y="230" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="20">&gt; Bitcoin (BTC)</text>
@@ -26,15 +26,51 @@
   <text x="82" y="452" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="20">  Chainlink (LINK)</text>
   <text x="82" y="480" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="18">  Last price 29</text>
 
-  <text x="624" y="192" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="26">Bitcoin (BTC)</text>
-  <text x="624" y="228" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="19">Last price: 70000</text>
-  <text x="624" y="258" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="19">MARKET_CAP: 1000000</text>
-  <text x="624" y="288" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="19">RSI14: 61.2</text>
-  <text x="624" y="332" fill="#B8F3D7" font-family="Menlo, Monaco, Consolas, monospace" font-size="20">OHLCV Sparkline</text>
-  <text x="624" y="372" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="24">          __</text>
-  <text x="624" y="402" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="24">    __---'  `---__</text>
-  <text x="624" y="432" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="24"> _-'              `--_</text>
-  <text x="624" y="484" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="18">Use j/k to move, Enter for detail, f for filter.</text>
+  <text x="624" y="192" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="24">BTC  DAILY  30 candles</text>
+  <text x="624" y="224" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="18">O 70000  H 71450  L 69210  C 70980</text>
+  <text x="624" y="250" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="17">@ 2026-03-18 00:00 UTC</text>
+  <text x="624" y="274" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="16">z zoom  |  c mode  |  i interval</text>
+
+  <text x="624" y="322" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="16">71450</text>
+  <text x="624" y="376" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="16">70980</text>
+  <text x="624" y="430" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="16">70400</text>
+  <text x="624" y="484" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="16">69800</text>
+  <text x="624" y="538" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="16">69210</text>
+
+  <line x1="690" y1="306" x2="1040" y2="306" stroke="#2D505B" stroke-width="1"/>
+  <line x1="690" y1="360" x2="1040" y2="360" stroke="#2D505B" stroke-width="1"/>
+  <line x1="690" y1="414" x2="1040" y2="414" stroke="#2D505B" stroke-width="1"/>
+  <line x1="690" y1="468" x2="1040" y2="468" stroke="#2D505B" stroke-width="1"/>
+  <line x1="690" y1="522" x2="1040" y2="522" stroke="#2D505B" stroke-width="1"/>
+  <line x1="690" y1="538" x2="1040" y2="538" stroke="#4B6574" stroke-width="2"/>
+
+  <line x1="730" y1="468" x2="730" y2="538" stroke="#D7E3EA" stroke-width="2"/>
+  <rect x="721" y="492" width="18" height="30" fill="#41C96B"/>
+
+  <line x1="770" y1="400" x2="770" y2="502" stroke="#D7E3EA" stroke-width="2"/>
+  <rect x="761" y="436" width="18" height="44" fill="#41C96B"/>
+
+  <line x1="810" y1="342" x2="810" y2="454" stroke="#D7E3EA" stroke-width="2"/>
+  <rect x="801" y="372" width="18" height="58" fill="#D45A4A"/>
+
+  <line x1="850" y1="324" x2="850" y2="432" stroke="#D7E3EA" stroke-width="2"/>
+  <rect x="841" y="350" width="18" height="54" fill="#41C96B"/>
+
+  <line x1="890" y1="376" x2="890" y2="488" stroke="#D7E3EA" stroke-width="2"/>
+  <rect x="881" y="412" width="18" height="46" fill="#D45A4A"/>
+
+  <line x1="930" y1="302" x2="930" y2="432" stroke="#D7E3EA" stroke-width="2"/>
+  <rect x="921" y="336" width="18" height="62" fill="#41C96B"/>
+
+  <line x1="970" y1="350" x2="970" y2="504" stroke="#D7E3EA" stroke-width="2"/>
+  <rect x="961" y="388" width="18" height="72" fill="#41C96B"/>
+
+  <line x1="1010" y1="320" x2="1010" y2="486" stroke="#D7E3EA" stroke-width="2"/>
+  <rect x="1001" y="360" width="18" height="64" fill="#D45A4A"/>
+
+  <text x="702" y="562" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="14">03/01</text>
+  <text x="850" y="562" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="14">03/10</text>
+  <text x="980" y="562" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="14">03/18</text>
 
   <text x="1130" y="188" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="16">{</text>
   <text x="1130" y="214" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="16">  "symbols": [</text>
@@ -47,6 +83,8 @@
   <text x="1130" y="396" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="16">  ]</text>
   <text x="1130" y="422" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="16">}</text>
 
-  <text x="624" y="676" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="18">j/k or arrows move  |  / search  |  Enter detail  |  f filter</text>
-  <text x="624" y="708" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="18">r refresh  |  permits 42/2000  |  updated 14:25:03  |  auth env</text>
+  <text x="624" y="678" fill="#EAF4FB" font-family="Menlo, Monaco, Consolas, monospace" font-size="19">symbol: BTC</text>
+  <text x="624" y="708" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="18">name: Bitcoin  |  lastPrice: 70000</text>
+  <text x="624" y="738" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="18">MARKET_CAP: 1000000  |  RSI14: 61.2</text>
+  <text x="624" y="768" fill="#8FB2C2" font-family="Menlo, Monaco, Consolas, monospace" font-size="18">chart: candles  |  interval: DAILY x30</text>
 </svg>

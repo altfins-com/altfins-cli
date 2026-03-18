@@ -15,6 +15,7 @@ Terminal-native crypto market intelligence for traders, analysts, and AI agents.
 ## Features at a Glance
 
 - Interactive TUI for markets, signals, technical analysis, and news
+- Candle-first OHLC charts with green/red bodies and braille fallback for tight panes
 - Machine-readable `json`, `jsonl`, and `csv` output for scripts and pipelines
 - `--dry-run` request previews with redacted auth headers
 - `af commands -o json` for agent and LLM self-discovery
@@ -161,6 +162,9 @@ Enter            Open detail mode
 Esc              Return to the list
 Tab              Switch focus
 f                Toggle filter drawer
+z                Toggle chart zoom
+c                Toggle candles/braille
+i                Cycle chart interval
 r                Refresh data
 q                Quit
 ```
@@ -168,18 +172,27 @@ q                Quit
 The current TUI layout includes:
 
 - A left-side browser for lists and search
-- A right-side detail pane for the selected item
+- A chart-first detail pane for markets, signals, and technical analysis
+- Green/red OHLC candles with a braille fallback when the pane is narrow
+- A dedicated chart zoom mode for the selected asset
+- Interval cycling between hourly, 4-hour, and daily presets inside the TUI
 - Active filter visibility
 - Permit counts in the footer
-- Inline OHLCV sparkline loading for selected symbols
 
-Example sparkline style:
+Example candle-style detail:
 
 ```text
-OHLCV Sparkline
-        __
-  __---'  `---__
-_'              `--_
+BTC  DAILY  30 candles
+O 70000  H 71450  L 69210  C 70980  @ 2026-03-18 00:00 UTC
+
+71450 ┤          │ █
+70980 ┤      █   │██
+70500 ┤    ████  ███
+70000 ┤  ███████ ███
+69600 ┤ ██ │ ████ │
+69210 ┤ │  │  ██  │
+      └────────────────
+        03/01   03/10   03/18
 ```
 
 ## Common Workflows

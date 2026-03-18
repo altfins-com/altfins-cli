@@ -56,9 +56,8 @@ type quotaMsg struct {
 }
 
 type chartMsg struct {
-	symbol string
-	view   string
-	err    error
+	key   string
+	state chartState
 }
 
 type errMsg struct {
@@ -68,26 +67,32 @@ type errMsg struct {
 type loadFn func(context.Context, *altfins.Client, map[string]any) ([]browserItem, error)
 
 type browserModel struct {
-	title       string
-	client      *altfins.Client
-	authSource  string
-	filter      map[string]any
-	filterJSON  string
-	load        loadFn
-	list        list.Model
-	loading     bool
-	err         error
-	quota       altfins.PermitsInfo
-	width       int
-	height      int
-	showFilter  bool
-	detailOnly  bool
-	focus       string
-	lastRefresh time.Time
-	charts      map[string]string
+	title                 string
+	client                *altfins.Client
+	authSource            string
+	filter                map[string]any
+	filterJSON            string
+	load                  loadFn
+	list                  list.Model
+	loading               bool
+	err                   error
+	quota                 altfins.PermitsInfo
+	width                 int
+	height                int
+	showFilter            bool
+	detailOnly            bool
+	focus                 string
+	lastRefresh           time.Time
+	chartConfig           chartConfig
+	chartMode             chartMode
+	chartPresetIndex      int
+	chartZoom             bool
+	zoomRestoreDetailOnly bool
+	charts                map[string]chartState
+	chartLoading          map[string]bool
 }
 
-func newBrowserModel(title string, deps *Dependencies, loader loadFn) browserModel {
+func newBrowserModel(title string, deps *Dependencies, loader loadFn, chartCfg chartConfig) browserModel {
 	delegate := list.NewDefaultDelegate()
 	delegate.ShowDescription = true
 
@@ -98,17 +103,26 @@ func newBrowserModel(title string, deps *Dependencies, loader loadFn) browserMod
 	listModel.SetShowStatusBar(true)
 	listModel.SetShowPagination(true)
 
+	defaultIndex := chartCfg.DefaultIndex
+	if defaultIndex < 0 || defaultIndex >= len(chartCfg.Presets) {
+		defaultIndex = 0
+	}
+
 	return browserModel{
-		title:      title,
-		client:     deps.Client,
-		authSource: deps.AuthSource,
-		filter:     deps.Filter,
-		filterJSON: deps.FilterJSON,
-		load:       loader,
-		list:       listModel,
-		loading:    true,
-		focus:      "list",
-		charts:     map[string]string{},
+		title:            title,
+		client:           deps.Client,
+		authSource:       deps.AuthSource,
+		filter:           deps.Filter,
+		filterJSON:       deps.FilterJSON,
+		load:             loader,
+		list:             listModel,
+		loading:          true,
+		focus:            "list",
+		chartConfig:      chartCfg,
+		chartMode:        chartModeCandles,
+		chartPresetIndex: defaultIndex,
+		charts:           map[string]chartState{},
+		chartLoading:     map[string]bool{},
 	}
 }
 
@@ -139,9 +153,8 @@ func (m browserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case chartMsg:
-		if msg.err == nil && msg.symbol != "" {
-			m.charts[msg.symbol] = msg.view
-		}
+		delete(m.chartLoading, msg.key)
+		m.charts[msg.key] = msg.state
 		return m, nil
 	case errMsg:
 		m.loading = false
@@ -154,6 +167,8 @@ func (m browserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "r":
 			m.loading = true
 			m.err = nil
+			m.charts = map[string]chartState{}
+			m.chartLoading = map[string]bool{}
 			return m, tea.Batch(m.loadCmd(), m.quotaCmd())
 		case "tab":
 			if m.focus == "list" {
@@ -170,7 +185,41 @@ func (m browserModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.detailOnly = true
 			}
 			return m, nil
+		case "z":
+			if !m.chartConfig.Enabled || m.selected() == nil || m.selected().symbol == "" {
+				return m, nil
+			}
+			if m.chartZoom {
+				m.chartZoom = false
+				m.detailOnly = m.zoomRestoreDetailOnly
+			} else {
+				m.zoomRestoreDetailOnly = m.detailOnly
+				m.detailOnly = true
+				m.chartZoom = true
+			}
+			return m, m.loadChartForSelection()
+		case "c":
+			if !m.chartConfig.Enabled {
+				return m, nil
+			}
+			if m.chartMode == chartModeCandles {
+				m.chartMode = chartModeBraille
+			} else {
+				m.chartMode = chartModeCandles
+			}
+			return m, nil
+		case "i":
+			if !m.chartConfig.Enabled || len(m.chartConfig.Presets) == 0 {
+				return m, nil
+			}
+			m.chartPresetIndex = (m.chartPresetIndex + 1) % len(m.chartConfig.Presets)
+			return m, m.loadChartForSelection()
 		case "esc", "backspace":
+			if m.chartZoom {
+				m.chartZoom = false
+				m.detailOnly = m.zoomRestoreDetailOnly
+				return m, nil
+			}
 			if m.detailOnly {
 				m.detailOnly = false
 				return m, nil
@@ -214,47 +263,140 @@ func (m browserModel) View() string {
 }
 
 func (m browserModel) renderBody() string {
-	detail := m.renderDetail()
+	bodyHeight := max(10, m.height-4)
+
+	if m.chartZoom && m.chartConfig.Enabled {
+		return m.renderZoomBody(m.width, bodyHeight)
+	}
 
 	if m.detailOnly {
-		blocks := []string{detail}
+		if m.chartConfig.Enabled {
+			return m.renderChartDetailColumn(m.width, bodyHeight)
+		}
+		blocks := []string{m.renderStandardDetailBox(m.width, bodyHeight)}
 		if m.showFilter {
-			blocks = append(blocks, m.renderFilter())
+			blocks = append(blocks, m.renderFilterBox(m.width, 10))
 		}
 		return lipgloss.JoinVertical(lipgloss.Left, blocks...)
 	}
 
-	leftWidth := max(30, m.width/2-1)
-	rightWidth := max(30, m.width-leftWidth-1)
+	leftWidth := max(34, m.width/2-1)
+	rightWidth := max(42, m.width-leftWidth-1)
 
 	left := lipgloss.NewStyle().
 		Width(leftWidth).
+		Height(bodyHeight).
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(m.borderColor("list")).
 		Render(m.list.View())
 
-	rightParts := []string{
-		lipgloss.NewStyle().
-			Width(rightWidth).
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(m.borderColor("detail")).
-			Render(detail),
+	var right string
+	if m.chartConfig.Enabled {
+		right = m.renderChartDetailColumn(rightWidth, bodyHeight)
+	} else {
+		rightParts := []string{
+			m.renderStandardDetailBox(rightWidth, bodyHeight),
+		}
+		if m.showFilter {
+			rightParts = append(rightParts, m.renderFilterBox(rightWidth, 10))
+		}
+		right = lipgloss.JoinVertical(lipgloss.Left, rightParts...)
 	}
-	if m.showFilter {
-		rightParts = append(rightParts,
-			lipgloss.NewStyle().
-				Width(rightWidth).
-				Border(lipgloss.RoundedBorder()).
-				BorderForeground(lipgloss.Color("12")).
-				Render(m.renderFilter()),
-		)
-	}
-	right := lipgloss.JoinVertical(lipgloss.Left, rightParts...)
 
 	return lipgloss.JoinHorizontal(lipgloss.Top, left, right)
 }
 
-func (m browserModel) renderDetail() string {
+func (m browserModel) renderChartDetailColumn(width, height int) string {
+	filterHeight := 0
+	if m.showFilter {
+		filterHeight = 10
+	}
+	available := max(14, height-filterHeight)
+	metadataHeight := max(10, available/3)
+	chartHeight := max(14, available-metadataHeight-1)
+
+	blocks := []string{
+		m.renderChartBox(width, chartHeight),
+		m.renderMetadataBox(width, metadataHeight),
+	}
+	if m.showFilter {
+		blocks = append(blocks, m.renderFilterBox(width, filterHeight))
+	}
+	return lipgloss.JoinVertical(lipgloss.Left, blocks...)
+}
+
+func (m browserModel) renderZoomBody(width, height int) string {
+	filterHeight := 0
+	if m.showFilter {
+		filterHeight = 10
+	}
+	summaryHeight := 7
+	available := max(16, height-filterHeight)
+	chartHeight := max(16, available-summaryHeight-1)
+
+	blocks := []string{
+		m.renderChartBox(width, chartHeight),
+		m.renderZoomSummaryBox(width, summaryHeight),
+	}
+	if m.showFilter {
+		blocks = append(blocks, m.renderFilterBox(width, filterHeight))
+	}
+	return lipgloss.JoinVertical(lipgloss.Left, blocks...)
+}
+
+func (m browserModel) renderStandardDetailBox(width, height int) string {
+	return m.panel(width, height, m.borderColor("detail"), m.renderMetadata())
+}
+
+func (m browserModel) renderChartBox(width, height int) string {
+	selected := m.selected()
+	contentLines := []string{}
+	title := "Chart"
+
+	if selected == nil {
+		contentLines = append(contentLines, "No selection.")
+	} else if selected.symbol == "" {
+		contentLines = append(contentLines, "This item does not expose a tradable symbol.")
+	} else {
+		chartWidth := max(16, width-4)
+		chartHeight := max(6, height-8)
+		rendered := m.currentRenderedChart(chartWidth, chartHeight)
+		contentLines = append(contentLines, lipgloss.NewStyle().Bold(true).Render(rendered.Title))
+		if rendered.Summary != "" {
+			contentLines = append(contentLines, chartDimStyle.Render(rendered.Summary))
+		}
+		if rendered.Notice != "" {
+			contentLines = append(contentLines, chartDimStyle.Render(rendered.Notice))
+		}
+		contentLines = append(contentLines, "", rendered.Body)
+	}
+
+	return m.panel(width, height, m.borderColor("detail"), title+"\n"+strings.Join(contentLines, "\n"))
+}
+
+func (m browserModel) renderMetadataBox(width, height int) string {
+	return m.panel(width, height, m.borderColor("detail"), m.renderMetadata())
+}
+
+func (m browserModel) renderZoomSummaryBox(width, height int) string {
+	selected := m.selected()
+	lines := []string{
+		lipgloss.NewStyle().Bold(true).Render("Chart Focus"),
+	}
+	if selected != nil {
+		lines = append(lines, selected.title)
+		if selected.description != "" {
+			lines = append(lines, chartDimStyle.Render(selected.description))
+		}
+	}
+	preset := m.activeChartPreset()
+	if preset.Interval != "" {
+		lines = append(lines, chartDimStyle.Render(fmt.Sprintf("Mode %s  |  Interval %s x%d  |  c toggle  |  i cycle  |  Esc back", strings.ToUpper(string(m.chartMode)), preset.Interval, preset.Bars)))
+	}
+	return m.panel(width, height, lipgloss.Color("12"), strings.Join(lines, "\n"))
+}
+
+func (m browserModel) renderMetadata() string {
 	selected := m.selected()
 	if selected == nil {
 		return "No items loaded."
@@ -262,16 +404,11 @@ func (m browserModel) renderDetail() string {
 
 	lines := []string{
 		lipgloss.NewStyle().Bold(true).Render(selected.title),
-		selected.description,
-		"",
 	}
-	if chart, ok := m.charts[selected.symbol]; ok && chart != "" {
-		lines = append(lines,
-			lipgloss.NewStyle().Foreground(lipgloss.Color("12")).Render("OHLCV Sparkline"),
-			chart,
-			"",
-		)
+	if selected.description != "" {
+		lines = append(lines, selected.description, "")
 	}
+
 	keys := make([]string, 0, len(selected.details))
 	for key := range selected.details {
 		keys = append(keys, key)
@@ -283,10 +420,19 @@ func (m browserModel) renderDetail() string {
 	return strings.Join(lines, "\n")
 }
 
-func (m browserModel) renderFilter() string {
-	return lipgloss.NewStyle().
+func (m browserModel) renderFilterBox(width, height int) string {
+	return m.panel(width, height, lipgloss.Color("12"), lipgloss.NewStyle().
 		Foreground(lipgloss.Color("10")).
-		Render("Active Filter") + "\n" + m.filterJSON
+		Render("Active Filter")+"\n"+m.filterJSON)
+}
+
+func (m browserModel) panel(width, height int, border lipgloss.Color, content string) string {
+	return lipgloss.NewStyle().
+		Width(width).
+		Height(height).
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(border).
+		Render(content)
 }
 
 func (m browserModel) selected() *browserItem {
@@ -314,24 +460,37 @@ func (m browserModel) quotaCmd() tea.Cmd {
 	}
 }
 
-func (m browserModel) loadChartForSelection() tea.Cmd {
+func (m *browserModel) loadChartForSelection() tea.Cmd {
+	if !m.chartConfig.Enabled || m.client == nil {
+		return nil
+	}
 	selected := m.selected()
 	if selected == nil || selected.symbol == "" {
 		return nil
 	}
-	if _, ok := m.charts[selected.symbol]; ok {
+	preset := m.activeChartPreset()
+	if preset.Interval == "" || preset.Bars <= 0 {
 		return nil
 	}
+	key := chartCacheKey(selected.symbol, preset)
+	if _, ok := m.charts[key]; ok {
+		return nil
+	}
+	if m.chartLoading[key] {
+		return nil
+	}
+	m.chartLoading[key] = true
+
 	symbol := selected.symbol
 	return func() tea.Msg {
-		page, err := m.client.OHLCVHistory(context.Background(), altfins.Paging{Size: 30}, map[string]any{
+		page, err := m.client.OHLCVHistory(context.Background(), altfins.Paging{Size: preset.Bars}, map[string]any{
 			"symbol":       symbol,
-			"timeInterval": "DAILY",
+			"timeInterval": preset.Interval,
 		})
-		if err != nil {
-			return chartMsg{symbol: symbol, err: err}
+		return chartMsg{
+			key:   key,
+			state: newChartState(symbol, preset, page.Content, err),
 		}
-		return chartMsg{symbol: symbol, view: renderSparkline(page.Content)}
 	}
 }
 
@@ -359,8 +518,18 @@ func (m browserModel) statusLine() string {
 		"Esc back",
 		"Tab focus",
 		"f filter",
+		"z zoom",
+		"c chart mode",
+		"i interval",
 		"r refresh",
 		fmt.Sprintf("permits %d/%d", m.quota.AvailablePermits, m.quota.MonthlyAvailablePermits),
+	}
+	if m.chartConfig.Enabled {
+		preset := m.activeChartPreset()
+		if preset.Interval != "" {
+			parts = append(parts, fmt.Sprintf("chart %s", strings.ToUpper(string(m.chartMode))))
+			parts = append(parts, fmt.Sprintf("%s x%d", preset.Interval, preset.Bars))
+		}
 	}
 	if !m.lastRefresh.IsZero() {
 		parts = append(parts, "updated "+m.lastRefresh.Format("15:04:05"))
@@ -369,6 +538,53 @@ func (m browserModel) statusLine() string {
 		parts = append(parts, "auth "+m.authSource)
 	}
 	return strings.Join(parts, "  |  ")
+}
+
+func (m browserModel) activeChartPreset() chartPreset {
+	if !m.chartConfig.Enabled || len(m.chartConfig.Presets) == 0 {
+		return chartPreset{}
+	}
+	index := m.chartPresetIndex
+	if index < 0 || index >= len(m.chartConfig.Presets) {
+		index = 0
+	}
+	return m.chartConfig.Presets[index]
+}
+
+func (m browserModel) currentRenderedChart(width, height int) renderedChart {
+	selected := m.selected()
+	if selected == nil || selected.symbol == "" {
+		return renderedChart{
+			Title:         "OHLCV",
+			Summary:       "No symbol selected.",
+			Body:          "Select a market item, signal, or technical analysis entry to load chart data.",
+			EffectiveMode: m.chartMode,
+		}
+	}
+	preset := m.activeChartPreset()
+	key := chartCacheKey(selected.symbol, preset)
+	if m.chartLoading[key] {
+		return renderedChart{
+			Title:         fmt.Sprintf("%s  %s  %d candles", selected.symbol, preset.Interval, preset.Bars),
+			Summary:       "Loading OHLCV history...",
+			Body:          "Fetching chart data...",
+			EffectiveMode: m.chartMode,
+		}
+	}
+	state, ok := m.charts[key]
+	if !ok {
+		return renderedChart{
+			Title:         fmt.Sprintf("%s  %s  %d candles", selected.symbol, preset.Interval, preset.Bars),
+			Summary:       "Waiting for chart data...",
+			Body:          "Use j/k to move through symbols and load OHLCV history.",
+			EffectiveMode: m.chartMode,
+		}
+	}
+	return renderChart(state, width, height, m.chartMode)
+}
+
+func chartCacheKey(symbol string, preset chartPreset) string {
+	return fmt.Sprintf("%s|%s|%d", strings.ToUpper(strings.TrimSpace(symbol)), preset.Interval, preset.Bars)
 }
 
 func max(a, b int) int {
