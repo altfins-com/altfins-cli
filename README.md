@@ -249,6 +249,42 @@ r                Refresh data
 q                Quit
 ```
 
+The `f` drawer shows the active API filter that was used to start the TUI. It is not an in-place form editor. Use `/` for local search over already loaded rows, and use `--symbol`, `--filter`, or `--stdin-json` when launching the TUI to seed API-side filters.
+
+### Start TUI With Filters
+
+Seed the TUI with a simple symbol filter:
+
+```bash
+af tui markets --symbol BTC
+af tui ta --symbol SOL
+```
+
+Pass inline JSON as the initial API filter:
+
+```bash
+af tui markets --filter '{"symbols":["BTC","ETH"],"displayType":["MARKET_CAP","RSI14"]}'
+af tui signals --filter '{"symbols":["BTC"],"direction":"BULLISH"}'
+```
+
+Load the initial filter from a JSON file:
+
+```bash
+af tui markets --filter @filters/breakout.json
+```
+
+Or pipe the filter JSON in through stdin:
+
+```bash
+printf '%s' '{"symbols":["BTC"],"direction":"BULLISH"}' | af tui signals --stdin-json
+```
+
+Once the TUI is open:
+
+- `f` shows the active filter JSON used for API requests
+- `/` searches only the rows that are already loaded into the list
+- `r` refreshes using the same starting filter
+
 The current TUI layout includes:
 
 - A left-side browser for lists and search
@@ -385,6 +421,13 @@ af markets search --filter @filters/breakout.json
 cat filters/breakout.json | af markets search --stdin-json
 ```
 
+The same pattern also works for TUI entrypoints when you want the screen to open with a preloaded API filter:
+
+```bash
+af tui markets --filter @filters/breakout.json
+printf '%s' '{"symbols":["BTC"],"direction":"BULLISH"}' | af tui signals --stdin-json
+```
+
 Example screener body:
 
 ```json
@@ -403,6 +446,7 @@ How merging works:
 - `--filter` accepts inline JSON or `@path/to/file.json`
 - `--stdin-json` reads the JSON body from stdin
 - explicit CLI flags are applied after the JSON body is loaded, so flags win if both set the same field
+- in TUI commands, `f` shows that starting filter and `/` remains a local search over loaded rows
 
 The screener request body supports these advanced filter arrays:
 
