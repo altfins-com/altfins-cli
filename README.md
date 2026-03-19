@@ -264,7 +264,29 @@ Pass inline JSON as the initial API filter:
 
 ```bash
 af tui markets --filter '{"symbols":["BTC","ETH"],"displayType":["MARKET_CAP","RSI14"]}'
-af tui signals --filter '{"symbols":["BTC"],"direction":"BULLISH"}'
+af tui signals --filter '{"symbols":["BTC"],"signalDirection":"BULLISH"}'
+```
+
+Use the raw API field names in these JSON bodies, such as `timeInterval`, `signalDirection`, `fromDate`, and `toDate`.
+
+**Windows note:** if you paste these JSON examples into a Windows shell that expects double-quoted arguments, escape inner double quotes as `\"`.
+
+More inline filter ideas:
+
+```bash
+af tui markets --filter '{"symbols":["BTC","ETH","SOL"],"timeInterval":"DAILY","displayType":["MARKET_CAP","RSI14","MACD"]}'
+af tui markets --filter '{"timeInterval":"HOURS4","macdFilter":"BUY","minimumMarketCapValue":100000000,"displayType":["MARKET_CAP","MACD","MACD_SIGNAL_LINE"]}'
+af tui markets --filter '{"supportResistanceFilter":"BROKEN_ABOVE_RESISTANCE","supportResistanceLookBackIntervals":"3","displayType":["RESISTANCE","SUPPORT","RSI14"]}'
+af tui markets --filter '{"coinTypeFilter":"REGULAR","coinCategoryFilter":["AI_BIG_DATA"],"displayType":["MARKET_CAP","PRICE_CHANGE_1W","RSI14"]}'
+af tui markets --filter '{"coinCategoryFilter":["REAL_WORLD_ASSETS_PROTOCOLS"],"minimumMarketCapValue":50000000,"displayType":["MARKET_CAP","PRICE_CHANGE_1M","VOLUME_RELATIVE"]}'
+af tui markets --filter '{"tradingTypeFilter":["SPOT"],"exchangeFilter":["BINANCE","COINBASE"],"displayType":["MARKET_CAP","VOLUME","VOLUME_RELATIVE"]}'
+af tui markets --filter '{"percentDownFromAthFilter":"PRICE_AT_LEAST_15_PERCENT_MORE_ATH","displayType":["ATH","PRICE_CHANGE_1M","RSI14"]}'
+af tui markets --filter '{"weekAnalytics52Filter":"HIGH_52W_IN_THE_LAST_2DAYS","displayType":["HIGH_52W","PRICE_CHANGE_1W","MOM"]}'
+af tui markets --filter '{"rsiDivergenceFilter":"BULLISH","newHighInLastPeriodFilter":"PERIODS_10","displayType":["RSI14","RSI_DIVERGENCE","PRICE_CHANGE_1W"]}'
+af tui markets --filter '{"macdHistogramFilter":"H1_UP","displayType":["MACD","MACD_SIGNAL_LINE","MACD_HISTOGRAM"]}'
+af tui signals --filter '{"symbols":["BTC","ETH"],"signalDirection":"BULLISH","fromDate":"2026-03-01T00:00:00Z"}'
+af tui signals --filter '{"signals":["SIGNALS_SUMMARY_RISING_WEDGE"],"signalDirection":"BEARISH","fromDate":"2026-03-01T00:00:00Z","toDate":"2026-03-19T00:00:00Z"}'
+af tui news --filter '{"fromDate":"2026-03-01T00:00:00Z","toDate":"2026-03-19T00:00:00Z"}'
 ```
 
 Load the initial filter from a JSON file:
@@ -276,7 +298,7 @@ af tui markets --filter @filters/breakout.json
 Or pipe the filter JSON in through stdin:
 
 ```bash
-printf '%s' '{"symbols":["BTC"],"direction":"BULLISH"}' | af tui signals --stdin-json
+printf '%s' '{"symbols":["BTC"],"signalDirection":"BULLISH"}' | af tui signals --stdin-json
 ```
 
 Once the TUI is open:
@@ -425,7 +447,7 @@ The same pattern also works for TUI entrypoints when you want the screen to open
 
 ```bash
 af tui markets --filter @filters/breakout.json
-printf '%s' '{"symbols":["BTC"],"direction":"BULLISH"}' | af tui signals --stdin-json
+printf '%s' '{"symbols":["BTC"],"signalDirection":"BULLISH"}' | af tui signals --stdin-json
 ```
 
 Example screener body:
