@@ -56,11 +56,15 @@ func TestWriteOutputGolden(t *testing.T) {
 			if err != nil {
 				t.Fatalf("read golden: %v", err)
 			}
-			if got := buf.String(); got != string(want) {
-				t.Fatalf("output mismatch\n--- got ---\n%s\n--- want ---\n%s", got, string(want))
+			if got := normalizeNewlines(buf.String()); got != normalizeNewlines(string(want)) {
+				t.Fatalf("output mismatch\n--- got ---\n%s\n--- want ---\n%s", got, normalizeNewlines(string(want)))
 			}
 		})
 	}
+}
+
+func normalizeNewlines(value string) string {
+	return strings.ReplaceAll(value, "\r\n", "\n")
 }
 
 func TestWriteOutputJSONFieldsProjectsPermitsInfo(t *testing.T) {

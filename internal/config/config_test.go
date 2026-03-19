@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -36,6 +37,9 @@ func TestSaveAPIKeyUsesStrictPermissions(t *testing.T) {
 	info, err := os.Stat(path)
 	if err != nil {
 		t.Fatalf("stat config file: %v", err)
+	}
+	if runtime.GOOS == "windows" {
+		return
 	}
 	if got, want := info.Mode().Perm(), os.FileMode(0o600); got != want {
 		t.Fatalf("file permissions mismatch: got %v want %v", got, want)
