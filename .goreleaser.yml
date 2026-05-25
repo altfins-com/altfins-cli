@@ -11,6 +11,8 @@ builds:
   - id: af
     binary: af
     main: .
+    ldflags:
+      - -s -w -X github.com/altfins-com/altfins-cli/cmd.version={{ .Version }}
     env:
       - CGO_ENABLED=0
     goos:
