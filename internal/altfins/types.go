@@ -42,11 +42,11 @@ type AnalyticsType struct {
 }
 
 type SignalLabel struct {
-	NameBullish   string `json:"nameBullish,omitempty"`
-	NameBearish   string `json:"nameBearish,omitempty"`
+	NameBullish    string `json:"nameBullish,omitempty"`
+	NameBearish    string `json:"nameBearish,omitempty"`
 	TrendSensitive bool   `json:"trendSensitive,omitempty"`
-	SignalType    string `json:"signalType,omitempty"`
-	SignalKey     string `json:"signalKey,omitempty"`
+	SignalType     string `json:"signalType,omitempty"`
+	SignalKey      string `json:"signalKey,omitempty"`
 }
 
 type PermitsInfo struct {
@@ -55,22 +55,46 @@ type PermitsInfo struct {
 }
 
 type ScreenerSearchResult struct {
-	Symbol         string                 `json:"symbol"`
-	Name           string                 `json:"name"`
-	LastPrice      string                 `json:"lastPrice"`
-	AdditionalData map[string]any         `json:"additionalData"`
+	Symbol         string         `json:"symbol"`
+	Name           string         `json:"name"`
+	LastPrice      string         `json:"lastPrice"`
+	AdditionalData map[string]any `json:"additionalData"`
 }
 
 type SignalFeedItem struct {
-	Timestamp  time.Time `json:"timestamp"`
-	Direction  string    `json:"direction,omitempty"`
-	SignalKey  string    `json:"signalKey,omitempty"`
-	SignalName string    `json:"signalName,omitempty"`
-	Symbol     string    `json:"symbol,omitempty"`
-	LastPrice  string    `json:"lastPrice,omitempty"`
-	MarketCap  string    `json:"marketCap,omitempty"`
-	PriceChange string   `json:"priceChange,omitempty"`
-	SymbolName string    `json:"symbolName,omitempty"`
+	Timestamp   time.Time `json:"timestamp"`
+	Direction   string    `json:"direction,omitempty"`
+	SignalKey   string    `json:"signalKey,omitempty"`
+	SignalName  string    `json:"signalName,omitempty"`
+	Symbol      string    `json:"symbol,omitempty"`
+	LastPrice   string    `json:"lastPrice,omitempty"`
+	MarketCap   string    `json:"marketCap,omitempty"`
+	PriceChange string    `json:"priceChange,omitempty"`
+	Bullish     *bool     `json:"bullish,omitempty"`
+	SymbolName  string    `json:"symbolName,omitempty"`
+}
+
+func (i SignalFeedItem) DirectionLabel() string {
+	if i.Direction != "" {
+		return i.Direction
+	}
+	if i.Bullish == nil {
+		return ""
+	}
+	if *i.Bullish {
+		return "BULLISH"
+	}
+	return "BEARISH"
+}
+
+func (i SignalFeedItem) BullishText() string {
+	if i.Bullish == nil {
+		return ""
+	}
+	if *i.Bullish {
+		return "true"
+	}
+	return "false"
 }
 
 type NewsSummary struct {
@@ -114,10 +138,10 @@ type TechnicalAnalysisSummary struct {
 }
 
 type RequestPreview struct {
-	Method     string      `json:"method"`
-	URL        string      `json:"url"`
+	Method     string              `json:"method"`
+	URL        string              `json:"url"`
 	Query      map[string][]string `json:"query,omitempty"`
-	Body       any         `json:"body,omitempty"`
-	Headers    map[string]string `json:"headers,omitempty"`
-	AuthSource string      `json:"authSource,omitempty"`
+	Body       any                 `json:"body,omitempty"`
+	Headers    map[string]string   `json:"headers,omitempty"`
+	AuthSource string              `json:"authSource,omitempty"`
 }

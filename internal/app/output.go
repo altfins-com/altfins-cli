@@ -180,7 +180,8 @@ func toTableData(data any, fields []string) (tableData, error) {
 				item.Timestamp.Format(time.RFC3339),
 				item.Symbol,
 				item.SymbolName,
-				item.Direction,
+				item.DirectionLabel(),
+				item.BullishText(),
 				item.SignalKey,
 				item.SignalName,
 				item.LastPrice,
@@ -188,7 +189,7 @@ func toTableData(data any, fields []string) (tableData, error) {
 				item.MarketCap,
 			})
 		}
-		return projectTable(tableData{Headers: []string{"timestamp", "symbol", "symbolName", "direction", "signalKey", "signalName", "lastPrice", "priceChange", "marketCap"}, Rows: rows}, fields), nil
+		return projectTable(tableData{Headers: []string{"timestamp", "symbol", "symbolName", "direction", "bullish", "signalKey", "signalName", "lastPrice", "priceChange", "marketCap"}, Rows: rows}, fields), nil
 	case altfins.Page[altfins.NewsSummary]:
 		rows := make([][]string, 0, len(value.Content))
 		for _, item := range value.Content {

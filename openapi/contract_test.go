@@ -13,7 +13,12 @@ func TestOpenAPISnapshotContainsRequiredPaths(t *testing.T) {
 	}
 
 	var doc struct {
-		Paths map[string]json.RawMessage `json:"paths"`
+		Paths      map[string]json.RawMessage `json:"paths"`
+		Components struct {
+			Schemas map[string]struct {
+				Properties map[string]json.RawMessage `json:"properties"`
+			} `json:"schemas"`
+		} `json:"components"`
 	}
 	if err := json.Unmarshal(data, &doc); err != nil {
 		t.Fatalf("decode openapi snapshot: %v", err)
@@ -31,5 +36,13 @@ func TestOpenAPISnapshotContainsRequiredPaths(t *testing.T) {
 		if _, ok := doc.Paths[path]; !ok {
 			t.Fatalf("missing required path %q", path)
 		}
+	}
+
+	signalFeed, ok := doc.Components.Schemas["ApiSignalFeed"]
+	if !ok {
+		t.Fatal("missing ApiSignalFeed schema")
+	}
+	if _, ok := signalFeed.Properties["bullish"]; !ok {
+		t.Fatal("ApiSignalFeed schema must expose bullish response field")
 	}
 }

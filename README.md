@@ -207,9 +207,9 @@ af signals keys
 ```
 
 ```text
-timestamp              symbol  symbolName  direction  signalKey                      signalName
-2026-03-18T09:30:00Z   BTC     Bitcoin     BULLISH    FRESH_MOMENTUM_MACD_SIGNAL...  Bullish MACD crossover
-2026-03-18T10:15:00Z   SOL     Solana      BULLISH    SUPPORT_RESISTANCE_BREAKOUT     Resistance breakout
+timestamp              symbol  symbolName  direction  bullish  signalKey                      signalName
+2026-03-18T09:30:00Z   BTC     Bitcoin     BULLISH    true     FRESH_MOMENTUM_MACD_SIGNAL...  Bullish MACD crossover
+2026-03-18T10:15:00Z   SOL     Solana      BULLISH    true     SUPPORT_RESISTANCE_BREAKOUT     Resistance breakout
 ```
 
 ### Technical Analysis and News
@@ -431,10 +431,15 @@ Simple flag-first search examples:
 
 ```bash
 af markets search --symbols BTC,ETH,SOL --interval DAILY --display-type MARKET_CAP,RSI14,MACD
+af markets search --interval HOURS4 --macd BUY --min-market-cap 100000000 --display-type MARKET_CAP,MACD,MACD_SIGNAL_LINE
+af markets search --support-resistance BROKEN_ABOVE_RESISTANCE --support-resistance-lookback 3 --display-type MARKET_CAP,RSI14
+af markets search --rsi-divergence BULLISH --new-high PERIODS_10 --display-type MARKET_CAP,RSI14,PRICE_CHANGE_1W
 af signals list --direction BULLISH --signals FRESH_MOMENTUM_MACD_SIGNAL_LINE_CROSSOVER --from 2026-03-01
 af analytics history --symbol BTC --type RSI14 --interval DAILY --from 2026-03-01 --to 2026-03-18
 af news list --from 2026-03-01 --page 0 --size 50
 ```
+
+`af markets search` also exposes direct flags for current simple screener filters: `--coin-type`, `--categories`, `--trading-types`, `--exchanges`, `--ath-before`, `--ath-after`, `--support-resistance`, `--support-resistance-lookback`, `--week-52`, `--rsi-divergence`, `--new-low`, `--new-high`, `--macd`, `--macd-histogram`, and `--min-market-cap`.
 
 For advanced screener searches, send the raw JSON request body with `--filter` or `--stdin-json`:
 

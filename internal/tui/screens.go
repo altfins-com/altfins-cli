@@ -105,14 +105,16 @@ func loadSignals(ctx context.Context, client *altfins.Client, filter map[string]
 	}
 	items := make([]browserItem, 0, len(page.Content))
 	for _, item := range page.Content {
+		direction := item.DirectionLabel()
 		items = append(items, browserItem{
 			title:       fmt.Sprintf("%s %s", item.Symbol, item.SignalName),
-			description: fmt.Sprintf("%s | %s | %s", item.Direction, item.LastPrice, item.Timestamp.Format("2006-01-02 15:04")),
+			description: fmt.Sprintf("%s | %s | %s", direction, item.LastPrice, item.Timestamp.Format("2006-01-02 15:04")),
 			filterValue: strings.Join([]string{item.Symbol, item.SymbolName, item.SignalKey, item.SignalName}, " "),
 			symbol:      item.Symbol,
 			details: map[string]string{
 				"timestamp":   item.Timestamp.Format(timeLayout),
-				"direction":   item.Direction,
+				"direction":   direction,
+				"bullish":     item.BullishText(),
 				"signalKey":   item.SignalKey,
 				"signalName":  item.SignalName,
 				"symbol":      item.Symbol,
