@@ -20,7 +20,7 @@ func newRefsCommand() *cobra.Command {
 			return handleResult(cmd, data, err)
 		},
 	}
-	annotateEndpoint(symbolsCmd, "GET", "/api/v2/public/symbols")
+	markRemoteQuery(symbolsCmd, "GET", "/api/v2/public/symbols")
 
 	intervalsCmd := &cobra.Command{
 		Use:   "intervals",
@@ -34,7 +34,7 @@ func newRefsCommand() *cobra.Command {
 			return handleResult(cmd, data, err)
 		},
 	}
-	annotateEndpoint(intervalsCmd, "GET", "/api/v2/public/intervals")
+	markRemoteQuery(intervalsCmd, "GET", "/api/v2/public/intervals")
 
 	cmd.AddCommand(symbolsCmd, intervalsCmd)
 	return cmd

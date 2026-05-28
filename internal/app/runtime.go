@@ -39,6 +39,31 @@ func (e *AuthRequiredError) ExitCode() int {
 	return 3
 }
 
+// ConfirmationRequiredError is returned when a mutating command needs explicit
+// confirmation (a confirmation flag such as --yes, or --force) that was not
+// provided in a non-interactive context. It carries a dedicated exit code so
+// autonomous agents can distinguish "pass a confirmation flag" from a generic
+// failure.
+type ConfirmationRequiredError struct {
+	Command string
+	Flags   []string
+	Message string
+}
+
+func (e *ConfirmationRequiredError) Error() string {
+	if strings.TrimSpace(e.Message) != "" {
+		return e.Message
+	}
+	if strings.TrimSpace(e.Command) != "" {
+		return fmt.Sprintf("%s requires explicit confirmation", e.Command)
+	}
+	return "command requires explicit confirmation"
+}
+
+func (e *ConfirmationRequiredError) ExitCode() int {
+	return 5
+}
+
 func NewFactory(opts RootOptions, stdout, stderr io.Writer) (*Factory, error) {
 	manager, err := config.NewManager(config.DefaultAppName)
 	if err != nil {

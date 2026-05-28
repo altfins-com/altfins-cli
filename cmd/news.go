@@ -45,7 +45,7 @@ func newNewsCommand() *cobra.Command {
 			return handleResult(cmd, data, err)
 		},
 	}
-	annotateEndpoint(listCmd, "POST", "/api/v2/public/news-summary/search-requests")
+	markRemoteQuery(listCmd, "POST", "/api/v2/public/news-summary/search-requests")
 	paging.bind(listCmd)
 	bodyFlags.bind(listCmd)
 	listCmd.Flags().StringVar(&from, "from", "", "From date/datetime")
@@ -68,7 +68,7 @@ func newNewsCommand() *cobra.Command {
 			return handleResult(cmd, data, err)
 		},
 	}
-	annotateEndpoint(getCmd, "POST", "/api/v2/public/news-summary/find-summary")
+	markRemoteQuery(getCmd, "POST", "/api/v2/public/news-summary/find-summary")
 	getCmd.Flags().Int64Var(&messageID, "message-id", 0, "Message id")
 	getCmd.Flags().Int64Var(&sourceID, "source-id", 0, "Source id")
 

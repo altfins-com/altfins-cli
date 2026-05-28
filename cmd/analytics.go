@@ -24,7 +24,7 @@ func newAnalyticsCommand() *cobra.Command {
 			return handleResult(cmd, data, err)
 		},
 	}
-	annotateEndpoint(typesCmd, "GET", "/api/v2/public/analytics/types")
+	markRemoteQuery(typesCmd, "GET", "/api/v2/public/analytics/types")
 
 	var paging pagingFlags
 	var bodyFlags jsonBodyFlags
@@ -69,7 +69,7 @@ func newAnalyticsCommand() *cobra.Command {
 			return handleResult(cmd, data, err)
 		},
 	}
-	annotateEndpoint(historyCmd, "POST", "/api/v2/public/analytics/search-requests")
+	markRemoteQuery(historyCmd, "POST", "/api/v2/public/analytics/search-requests")
 	paging.bind(historyCmd)
 	bodyFlags.bind(historyCmd)
 	historyCmd.Flags().StringVar(&symbol, "symbol", "", "Symbol, e.g. BTC")

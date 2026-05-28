@@ -69,7 +69,7 @@ func newTUIBrowserCommand(use, short, path string, constructor func(*tui.Depende
 			return screen.Run()
 		},
 	}
-	annotateEndpoint(cmd, "TUI", path)
+	markInteractive(cmd, path)
 	filterFlags.bind(cmd)
 	cmd.Flags().StringVar(&symbol, "symbol", "", "Optional symbol seed filter")
 	return cmd

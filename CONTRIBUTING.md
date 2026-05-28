@@ -43,6 +43,23 @@ go run . commands -o json
 - `internal/tui/` contains Bubble Tea TUI models and views
 - `openapi/altfins-openapi.json` is the vendored API contract snapshot
 
+## Command Safety Metadata
+
+`af` exposes a machine-readable safety contract through `af commands -o json` (see the README "Agent Safety Contract"). Every new runnable command MUST declare its safety metadata. `cmd/safety_test.go` fails if any runnable leaf command is missing it.
+
+When adding a command, annotate it in its constructor:
+
+- Networked read command → `markRemoteQuery(cmd, method, path)`.
+- TUI command → `markInteractive(cmd, path)`.
+- Local read command → `markLocalRead(cmd)`.
+- Anything else (local/remote write, or custom confirmation/force) → `annotateSafety(cmd, safetyMeta{...})` with the correct `operationType`, mutation flags, `dryRunSupported`, and any `confirmationFlags` / `forceSupported`.
+
+Keep behavior and metadata consistent:
+
+- If a command mutates local state, it should respect `--dry-run`.
+- If it advertises `confirmationRequired`, it must enforce a confirmation flag and return `*app.ConfirmationRequiredError` (exit code `5`) when that flag is missing in non-interactive mode.
+- Use `--force` only where there is a genuine overwrite/override semantic.
+
 ## Release Notes
 
 Public install docs are package-manager-first. If you change release channels, artifact names, or package manager configuration, update both:

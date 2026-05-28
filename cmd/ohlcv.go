@@ -38,7 +38,7 @@ func newOHLCVCommand() *cobra.Command {
 			return handleResult(cmd, data, err)
 		},
 	}
-	annotateEndpoint(snapshotCmd, "POST", "/api/v2/public/ohlcv/snapshot-requests")
+	markRemoteQuery(snapshotCmd, "POST", "/api/v2/public/ohlcv/snapshot-requests")
 	snapshotFlags.bind(snapshotCmd)
 	snapshotCmd.Flags().StringVar(&snapshotSymbols, "symbols", "", "Comma-separated symbols")
 	snapshotCmd.Flags().StringVar(&snapshotInterval, "interval", "", "Time interval, e.g. DAILY")
@@ -82,7 +82,7 @@ func newOHLCVCommand() *cobra.Command {
 			return handleResult(cmd, data, err)
 		},
 	}
-	annotateEndpoint(historyCmd, "POST", "/api/v2/public/ohlcv/history-requests")
+	markRemoteQuery(historyCmd, "POST", "/api/v2/public/ohlcv/history-requests")
 	historyPaging.bind(historyCmd)
 	historyFlags.bind(historyCmd)
 	historyCmd.Flags().StringVar(&historySymbol, "symbol", "", "Symbol, e.g. BTC")

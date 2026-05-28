@@ -10,13 +10,13 @@ import (
 )
 
 type flagMeta struct {
-	Name       string `json:"name"`
-	Shorthand  string `json:"shorthand,omitempty"`
-	Type       string `json:"type"`
-	Usage      string `json:"usage"`
-	Default    string `json:"default,omitempty"`
-	Required   bool   `json:"required,omitempty"`
-	Inherited  bool   `json:"inherited,omitempty"`
+	Name      string `json:"name"`
+	Shorthand string `json:"shorthand,omitempty"`
+	Type      string `json:"type"`
+	Usage     string `json:"usage"`
+	Default   string `json:"default,omitempty"`
+	Required  bool   `json:"required,omitempty"`
+	Inherited bool   `json:"inherited,omitempty"`
 }
 
 type commandMeta struct {
@@ -26,6 +26,7 @@ type commandMeta struct {
 	Aliases  []string          `json:"aliases,omitempty"`
 	Example  string            `json:"example,omitempty"`
 	Endpoint map[string]string `json:"endpoint,omitempty"`
+	Safety   *safetyMeta       `json:"safety,omitempty"`
 	Flags    []flagMeta        `json:"flags,omitempty"`
 	Children []commandMeta     `json:"children,omitempty"`
 }
@@ -49,6 +50,7 @@ func newCommandsCommand(root *cobra.Command) *cobra.Command {
 			return factory.WriteOutput(rows)
 		},
 	}
+	markLocalRead(cmd)
 	return cmd
 }
 
@@ -60,6 +62,7 @@ func buildCommandMeta(cmd *cobra.Command, path string) commandMeta {
 		Aliases:  append([]string(nil), cmd.Aliases...),
 		Example:  cmd.Example,
 		Endpoint: endpointFor(cmd),
+		Safety:   safetyFor(cmd),
 		Flags:    collectFlagMeta(cmd),
 	}
 
@@ -107,11 +110,16 @@ func flattenCommandMeta(root commandMeta) []map[string]any {
 	rows := make([]map[string]any, 0)
 	var walk func(commandMeta)
 	walk = func(item commandMeta) {
+		operationType := ""
+		if item.Safety != nil {
+			operationType = string(item.Safety.OperationType)
+		}
 		rows = append(rows, map[string]any{
-			"command":  item.Command,
-			"short":    item.Short,
-			"endpoint": item.Endpoint,
-			"flags":    item.Flags,
+			"command":       item.Command,
+			"short":         item.Short,
+			"operationType": operationType,
+			"endpoint":      item.Endpoint,
+			"flags":         item.Flags,
 		})
 		for _, child := range item.Children {
 			walk(child)

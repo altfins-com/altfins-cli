@@ -24,7 +24,7 @@ func newSignalsCommand() *cobra.Command {
 			return handleResult(cmd, data, err)
 		},
 	}
-	annotateEndpoint(keysCmd, "GET", "/api/v2/public/signals-feed/signal-keys")
+	markRemoteQuery(keysCmd, "GET", "/api/v2/public/signals-feed/signal-keys")
 
 	var paging pagingFlags
 	var bodyFlags jsonBodyFlags
@@ -69,7 +69,7 @@ func newSignalsCommand() *cobra.Command {
 			return handleResult(cmd, data, err)
 		},
 	}
-	annotateEndpoint(listCmd, "POST", "/api/v2/public/signals-feed/search-requests")
+	markRemoteQuery(listCmd, "POST", "/api/v2/public/signals-feed/search-requests")
 	paging.bind(listCmd)
 	bodyFlags.bind(listCmd)
 	listCmd.Flags().StringVar(&symbols, "symbols", "", "Comma-separated symbol list")

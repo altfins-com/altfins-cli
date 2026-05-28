@@ -22,7 +22,7 @@ func newTACommand() *cobra.Command {
 			return handleResult(cmd, data, err)
 		},
 	}
-	annotateEndpoint(listCmd, "GET", "/api/v2/public/technical-analysis/data")
+	markRemoteQuery(listCmd, "GET", "/api/v2/public/technical-analysis/data")
 	paging.bind(listCmd)
 	listCmd.Flags().StringVar(&symbol, "symbol", "", "Symbol filter")
 

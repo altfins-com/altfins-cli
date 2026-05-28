@@ -24,7 +24,7 @@ func newMarketsCommand() *cobra.Command {
 			return handleResult(cmd, data, err)
 		},
 	}
-	annotateEndpoint(fieldsCmd, "GET", "/api/v2/public/screener-data/value-types")
+	markRemoteQuery(fieldsCmd, "GET", "/api/v2/public/screener-data/value-types")
 
 	var paging pagingFlags
 	var bodyFlags jsonBodyFlags
@@ -121,7 +121,7 @@ func newMarketsCommand() *cobra.Command {
 			return handleResult(cmd, data, err)
 		},
 	}
-	annotateEndpoint(searchCmd, "POST", "/api/v2/public/screener-data/search-requests")
+	markRemoteQuery(searchCmd, "POST", "/api/v2/public/screener-data/search-requests")
 	paging.bind(searchCmd)
 	bodyFlags.bind(searchCmd)
 	searchCmd.Flags().StringVar(&symbols, "symbols", "", "Comma-separated symbols")

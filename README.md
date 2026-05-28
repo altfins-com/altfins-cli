@@ -412,6 +412,77 @@ Why this matters:
 - `af commands` gives agents a self-documenting command index
 - one binary is easier to drop into local tools, shells, and CI jobs
 
+## Agent Safety Contract
+
+`af` is built to be driven by autonomous agents. Its safety affordances are part of the public contract and are exposed as machine-readable metadata, so an agent never has to infer them from help prose.
+
+### Command safety metadata
+
+Every runnable command carries a `safety` object in `af commands -o json`:
+
+```bash
+af commands -o json
+```
+
+```json
+{
+  "command": "af auth clear",
+  "safety": {
+    "operationType": "local_write",
+    "mutatesLocalState": true,
+    "mutatesRemoteState": false,
+    "dryRunSupported": true,
+    "confirmationRequired": true,
+    "confirmationFlags": ["--yes", "-y"],
+    "forceSupported": false
+  }
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `operationType` | One of `read`, `remote_query`, `local_write`, `remote_write`, `interactive`. |
+| `mutatesLocalState` | The command can change local config/state. |
+| `mutatesRemoteState` | The command can change remote state through the API. |
+| `dryRunSupported` | `--dry-run` previews the action without performing it. |
+| `confirmationRequired` | A confirmation flag is required for non-interactive use. |
+| `confirmationFlags` | Flags that satisfy confirmation (e.g. `--yes`, `-y`). |
+| `forceSupported` | `--force` overrides a protective check (e.g. replacing a stored key). |
+
+`operationType` values:
+
+- `read` — local read only (e.g. `af auth status`, `af commands`).
+- `remote_query` — reads from the altFINS API; mutates nothing; safe to `--dry-run`.
+- `local_write` — changes local config (e.g. `af auth set`, `af auth clear`).
+- `remote_write` — changes remote state through the API (reserved; no such command today).
+- `interactive` — long-running TUI; cannot be `--dry-run`.
+
+### Dry-run for local writes
+
+`auth set` and `auth clear` honor the global `--dry-run` flag. They report what they *would* do and never touch the config file:
+
+```bash
+af --dry-run auth set --api-key "$KEY" -o json
+af --dry-run auth clear -o json
+```
+
+### Confirmation and force
+
+- `af auth clear` permanently removes the stored API key. In non-interactive use (pipes, `/dev/null`, agents) it requires `--yes` / `-y`; at an interactive terminal it prompts for confirmation.
+- `af auth set` will not silently overwrite an existing stored key. Replacing a stored key requires `--force`. A key provided only via `ALTFINS_API_KEY` is not a stored key and is not blocked.
+
+### Exit codes
+
+`af` uses stable exit codes so agents can branch on outcome without scraping stderr:
+
+| Code | Meaning |
+| --- | --- |
+| `0` | Success. |
+| `1` | Generic error. |
+| `3` | Auth/config error (missing API key, HTTP `401`/`403`). |
+| `4` | API error (other non-2xx responses). |
+| `5` | Confirmation/force required (pass the listed `confirmationFlags` or `--force`). |
+
 ## Search Guide
 
 Most `af` data commands follow one of two patterns:

@@ -20,7 +20,7 @@ func newQuotaCommand() *cobra.Command {
 			return handleResult(cmd, data, err)
 		},
 	}
-	annotateEndpoint(currentCmd, "GET", "/api/v2/public/available-permits")
+	markRemoteQuery(currentCmd, "GET", "/api/v2/public/available-permits")
 
 	monthlyCmd := &cobra.Command{
 		Use:   "monthly",
@@ -34,7 +34,7 @@ func newQuotaCommand() *cobra.Command {
 			return handleResult(cmd, data, err)
 		},
 	}
-	annotateEndpoint(monthlyCmd, "GET", "/api/v2/public/monthly-available-permits")
+	markRemoteQuery(monthlyCmd, "GET", "/api/v2/public/monthly-available-permits")
 
 	allCmd := &cobra.Command{
 		Use:   "all",
@@ -48,7 +48,7 @@ func newQuotaCommand() *cobra.Command {
 			return handleResult(cmd, data, err)
 		},
 	}
-	annotateEndpoint(allCmd, "GET", "/api/v2/public/all-available-permits")
+	markRemoteQuery(allCmd, "GET", "/api/v2/public/all-available-permits")
 
 	cmd.AddCommand(currentCmd, monthlyCmd, allCmd)
 	return cmd
