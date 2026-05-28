@@ -266,10 +266,48 @@ func TestCommandsJSONExposesSafety(t *testing.T) {
 	check("af tui signals", OpInteractive, false)
 	check("af auth status", OpRead, false)
 
-	if s := byPath["af auth clear"]; s == nil || !s.ConfirmationRequired || len(s.ConfirmationFlags) == 0 {
-		t.Errorf("af auth clear must advertise confirmationRequired with flags, got %+v", s)
+	if s := byPath["af auth clear"]; s == nil || !s.ConfirmationRequired || len(s.ConfirmationFlags) == 0 || s.ConfirmationExitCode != app.ConfirmationRequiredExitCode {
+		t.Errorf("af auth clear must advertise confirmationRequired with flags and confirmationExitCode=%d, got %+v", app.ConfirmationRequiredExitCode, s)
 	}
-	if s := byPath["af auth set"]; s == nil || !s.ForceSupported {
-		t.Errorf("af auth set must advertise forceSupported, got %+v", s)
+	if s := byPath["af auth set"]; s == nil || !s.ForceSupported || !s.ForceRequiredToReplace || s.ConfirmationExitCode != app.ConfirmationRequiredExitCode {
+		t.Errorf("af auth set must advertise forceSupported, forceRequiredToReplace, and confirmationExitCode=%d, got %+v", app.ConfirmationRequiredExitCode, s)
 	}
+}
+
+// TestCommandsJSONEveryNodeHasSafety walks the full serialized `af commands -o json`
+// tree (including the root, command groups, and cobra's help/completion commands)
+// and fails if any emitted node lacks a valid safety.operationType. This is the
+// contract-completeness guard that the leaf-only test cannot provide.
+func TestCommandsJSONEveryNodeHasSafety(t *testing.T) {
+	isolatedConfig(t)
+	out, err := runCLI(t, nil, "commands", "-o", "json")
+	if err != nil {
+		t.Fatalf("commands -o json failed: %v (out=%s)", err, out)
+	}
+
+	var tree cmdNode
+	if err := json.Unmarshal([]byte(out), &tree); err != nil {
+		t.Fatalf("parse commands JSON: %v (out=%s)", err, out)
+	}
+
+	valid := map[OperationType]bool{
+		OpRead:        true,
+		OpRemoteQuery: true,
+		OpLocalWrite:  true,
+		OpRemoteWrite: true,
+		OpInteractive: true,
+	}
+
+	var walk func(cmdNode)
+	walk = func(n cmdNode) {
+		if n.Safety == nil {
+			t.Errorf("command %q emitted by `af commands -o json` has no safety object", n.Command)
+		} else if !valid[n.Safety.OperationType] {
+			t.Errorf("command %q has invalid/empty safety.operationType %q", n.Command, n.Safety.OperationType)
+		}
+		for _, child := range n.Children {
+			walk(child)
+		}
+	}
+	walk(tree)
 }

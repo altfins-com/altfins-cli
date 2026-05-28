@@ -387,7 +387,7 @@ af signals list --direction BULLISH --from 2026-03-01 -o json
 Example command metadata:
 
 ```bash
-af commands -o json | sed -n '1,20p'
+af commands -o json | sed -n '1,30p'
 ```
 
 ```json
@@ -395,6 +395,14 @@ af commands -o json | sed -n '1,20p'
   "command": "af",
   "use": "af",
   "short": "altFINS CLI for market data, signals, analytics, and TUI workflows",
+  "safety": {
+    "operationType": "read",
+    "mutatesLocalState": false,
+    "mutatesRemoteState": false,
+    "dryRunSupported": false,
+    "confirmationRequired": false,
+    "forceSupported": false
+  },
   "flags": [
     {
       "name": "dry-run",
@@ -405,11 +413,13 @@ af commands -o json | sed -n '1,20p'
 }
 ```
 
+Every command node carries the `safety` object — read commands, remote queries, local writes, and TUI surfaces are all classified. See [Agent Safety Contract](#agent-safety-contract) for the full schema.
+
 Why this matters:
 
 - JSON output stays machine-readable on stdout
 - dry runs expose endpoint and request body shape before execution
-- `af commands` gives agents a self-documenting command index
+- `af commands` gives agents a self-documenting command index, including machine-readable `safety` metadata on every command
 - one binary is easier to drop into local tools, shells, and CI jobs
 
 ## Agent Safety Contract
@@ -434,7 +444,8 @@ af commands -o json
     "dryRunSupported": true,
     "confirmationRequired": true,
     "confirmationFlags": ["--yes", "-y"],
-    "forceSupported": false
+    "forceSupported": false,
+    "confirmationExitCode": 5
   }
 }
 ```
@@ -448,6 +459,8 @@ af commands -o json
 | `confirmationRequired` | A confirmation flag is required for non-interactive use. |
 | `confirmationFlags` | Flags that satisfy confirmation (e.g. `--yes`, `-y`). |
 | `forceSupported` | `--force` overrides a protective check (e.g. replacing a stored key). |
+| `forceRequiredToReplace` | `--force` is required to overwrite existing stored state (e.g. `auth set` replacing a stored key). |
+| `confirmationExitCode` | Exit code returned when a required confirmation/force flag is omitted in non-interactive mode (here `5`). |
 
 `operationType` values:
 

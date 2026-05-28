@@ -31,13 +31,17 @@ const annotationSafety = "altfins:safety"
 // `af commands -o json`. The field set is intentionally small and
 // safety-focused rather than a general policy engine.
 type safetyMeta struct {
-	OperationType        OperationType `json:"operationType"`
-	MutatesLocalState    bool          `json:"mutatesLocalState"`
-	MutatesRemoteState   bool          `json:"mutatesRemoteState"`
-	DryRunSupported      bool          `json:"dryRunSupported"`
-	ConfirmationRequired bool          `json:"confirmationRequired"`
-	ConfirmationFlags    []string      `json:"confirmationFlags,omitempty"`
-	ForceSupported       bool          `json:"forceSupported"`
+	OperationType          OperationType `json:"operationType"`
+	MutatesLocalState      bool          `json:"mutatesLocalState"`
+	MutatesRemoteState     bool          `json:"mutatesRemoteState"`
+	DryRunSupported        bool          `json:"dryRunSupported"`
+	ConfirmationRequired   bool          `json:"confirmationRequired"`
+	ConfirmationFlags      []string      `json:"confirmationFlags,omitempty"`
+	ForceSupported         bool          `json:"forceSupported"`
+	ForceRequiredToReplace bool          `json:"forceRequiredToReplace,omitempty"`
+	// ConfirmationExitCode is the exit code the command returns when a required
+	// confirmation/force flag is missing in non-interactive mode (0 when N/A).
+	ConfirmationExitCode int `json:"confirmationExitCode,omitempty"`
 }
 
 // annotateSafety records the safety contract for a command. It is stored as a
@@ -70,6 +74,20 @@ func safetyFor(cmd *cobra.Command) *safetyMeta {
 	return &meta
 }
 
+// safetyForOrDefault returns the command's safety contract, defaulting any
+// un-annotated node to a local read. Only navigational/help nodes are
+// un-annotated (the root command, command groups, and cobra's generated
+// help/completion commands); they perform no operation, so classifying them as
+// `read` keeps every command emitted by `af commands` carrying an explicit
+// safety contract. Real operations are always annotated explicitly, and
+// cmd/safety_test.go enforces that on every runnable leaf.
+func safetyForOrDefault(cmd *cobra.Command) *safetyMeta {
+	if s := safetyFor(cmd); s != nil {
+		return s
+	}
+	return &safetyMeta{OperationType: OpRead}
+}
+
 // markRemoteQuery annotates a networked read command: it sets the endpoint
 // metadata and a remote_query safety contract that is safe to --dry-run.
 func markRemoteQuery(cmd *cobra.Command, method, path string) {
@@ -99,9 +117,11 @@ func markLocalRead(cmd *cobra.Command) {
 
 // isInteractiveStdin reports whether the command's stdin is a real terminal. It
 // decides whether a destructive command may prompt for confirmation (human at a
-// TTY) or must require an explicit confirmation flag (automation, pipes, agents,
-// /dev/null). A plain ModeCharDevice check is not enough because /dev/null is a
-// character device that is not a terminal, so we use a proper isatty check.
+// TTY) or must require an explicit confirmation flag (automation, agents). All
+// non-terminal stdin — a pipe, a redirected file, or /dev/null — is treated as
+// non-interactive. A plain ModeCharDevice check is not enough because /dev/null
+// is itself a character device that is not a terminal, so we use a proper isatty
+// check. A non-*os.File reader (e.g. a test buffer) is also non-interactive.
 func isInteractiveStdin(cmd *cobra.Command) bool {
 	file, ok := cmd.InOrStdin().(*os.File)
 	if !ok {

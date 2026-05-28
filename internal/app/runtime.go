@@ -39,6 +39,12 @@ func (e *AuthRequiredError) ExitCode() int {
 	return 3
 }
 
+// ConfirmationRequiredExitCode is the process exit code returned when a mutating
+// command needs an explicit confirmation/force flag that was not provided in a
+// non-interactive context. It is exposed as `confirmationExitCode` in
+// `af commands -o json` so the metadata and the real exit code cannot drift.
+const ConfirmationRequiredExitCode = 5
+
 // ConfirmationRequiredError is returned when a mutating command needs explicit
 // confirmation (a confirmation flag such as --yes, or --force) that was not
 // provided in a non-interactive context. It carries a dedicated exit code so
@@ -61,7 +67,7 @@ func (e *ConfirmationRequiredError) Error() string {
 }
 
 func (e *ConfirmationRequiredError) ExitCode() int {
-	return 5
+	return ConfirmationRequiredExitCode
 }
 
 func NewFactory(opts RootOptions, stdout, stderr io.Writer) (*Factory, error) {

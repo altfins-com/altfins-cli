@@ -62,7 +62,7 @@ func buildCommandMeta(cmd *cobra.Command, path string) commandMeta {
 		Aliases:  append([]string(nil), cmd.Aliases...),
 		Example:  cmd.Example,
 		Endpoint: endpointFor(cmd),
-		Safety:   safetyFor(cmd),
+		Safety:   safetyForOrDefault(cmd),
 		Flags:    collectFlagMeta(cmd),
 	}
 

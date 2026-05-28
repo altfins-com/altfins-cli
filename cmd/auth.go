@@ -80,10 +80,12 @@ func newAuthCommand() *cobra.Command {
 	setCmd.Flags().StringVar(&apiKey, "api-key", "", "API key to save")
 	setCmd.Flags().BoolVar(&setForce, "force", false, "Replace an existing stored API key instead of failing")
 	annotateSafety(setCmd, safetyMeta{
-		OperationType:     OpLocalWrite,
-		MutatesLocalState: true,
-		DryRunSupported:   true,
-		ForceSupported:    true,
+		OperationType:          OpLocalWrite,
+		MutatesLocalState:      true,
+		DryRunSupported:        true,
+		ForceSupported:         true,
+		ForceRequiredToReplace: true,
+		ConfirmationExitCode:   app.ConfirmationRequiredExitCode,
 	})
 
 	statusCmd := &cobra.Command{
@@ -174,6 +176,7 @@ func newAuthCommand() *cobra.Command {
 		DryRunSupported:      true,
 		ConfirmationRequired: true,
 		ConfirmationFlags:    []string{"--yes", "-y"},
+		ConfirmationExitCode: app.ConfirmationRequiredExitCode,
 	})
 
 	cmd.AddCommand(setCmd, statusCmd, clearCmd)
