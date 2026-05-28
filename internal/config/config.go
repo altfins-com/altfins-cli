@@ -106,6 +106,18 @@ func (m *Manager) Resolve() (Resolved, error) {
 	}, nil
 }
 
+// StoredAPIKey returns the API key persisted in the config file, ignoring any
+// ALTFINS_API_KEY environment override. It is empty when no config file exists
+// or the file has no key. Use this to decide whether a write would replace an
+// existing on-disk key.
+func (m *Manager) StoredAPIKey() (string, error) {
+	stored, err := m.loadStored()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(stored.APIKey), nil
+}
+
 func (m *Manager) SaveAPIKey(apiKey string) error {
 	apiKey = strings.TrimSpace(apiKey)
 	if apiKey == "" {

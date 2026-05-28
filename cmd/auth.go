@@ -24,13 +24,14 @@ func newAuthCommand() *cobra.Command {
 				return err
 			}
 
-			// A key already stored in config must not be silently replaced.
-			// An env-provided key (AuthSource "env") is not a stored key.
-			resolved, err := factory.ResolveConfig()
+			// A key already persisted in the config file must not be silently
+			// replaced. This checks the on-disk key only; a key provided via
+			// ALTFINS_API_KEY is not a stored key and does not block a write.
+			storedKey, err := factory.Config.StoredAPIKey()
 			if err != nil {
 				return err
 			}
-			keyAlreadyStored := resolved.AuthSource == "config"
+			keyAlreadyStored := storedKey != ""
 
 			if factory.Options.DryRun {
 				return handleResult(cmd, map[string]any{
