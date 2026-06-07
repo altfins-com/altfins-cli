@@ -2,3 +2,8 @@ af
 dist/
 coverage.out
 .DS_Store
+
+# graphify — AI knowledge graph (commit AI artifacts; skip the visual graph + local-only files)
+graphify-out/graph.html
+graphify-out/cost.json
+graphify-out/cache/

@@ -1,0 +1,212 @@
+{
+  "cmd/analytics.go": {
+    "mtime": 1780001660.3637605,
+    "ast_hash": "b9077a43098932817f1f92c99e0410b7",
+    "semantic_hash": ""
+  },
+  "cmd/auth.go": {
+    "mtime": 1780003304.4593236,
+    "ast_hash": "5fa14391a030caa6818687150c3f1a8d",
+    "semantic_hash": ""
+  },
+  "cmd/commands.go": {
+    "mtime": 1780003324.1513479,
+    "ast_hash": "daa59ca48af7ff2da161b2cb41bbef64",
+    "semantic_hash": ""
+  },
+  "cmd/helpers.go": {
+    "mtime": 1773862083.8329036,
+    "ast_hash": "b3a450a526eafa9b53ae3ef6637e5691",
+    "semantic_hash": ""
+  },
+  "cmd/markets.go": {
+    "mtime": 1780001657.9840965,
+    "ast_hash": "6acef0ee66ad5ad5889012dea8ebf24a",
+    "semantic_hash": ""
+  },
+  "cmd/news.go": {
+    "mtime": 1780001664.558155,
+    "ast_hash": "462424a4b9b06393cac0bbd500db2b6a",
+    "semantic_hash": ""
+  },
+  "cmd/ohlcv.go": {
+    "mtime": 1780001659.3699017,
+    "ast_hash": "f352b19d9b68eee57a373ad099a3c1cd",
+    "semantic_hash": ""
+  },
+  "cmd/quota.go": {
+    "mtime": 1780001656.543731,
+    "ast_hash": "04c23abe124136020c051ddcf83f5b06",
+    "semantic_hash": ""
+  },
+  "cmd/refs.go": {
+    "mtime": 1780001655.1357124,
+    "ast_hash": "907a540904e4f1a3c338fcb666b97ed6",
+    "semantic_hash": ""
+  },
+  "cmd/root.go": {
+    "mtime": 1773862083.8330183,
+    "ast_hash": "5e18629daad06aa580a9bc86f43024ad",
+    "semantic_hash": ""
+  },
+  "cmd/safety.go": {
+    "mtime": 1780003322.496083,
+    "ast_hash": "694a032f204cd6e92e3b7fa1ce16e5ac",
+    "semantic_hash": ""
+  },
+  "cmd/safety_test.go": {
+    "mtime": 1780003391.0623312,
+    "ast_hash": "f1e0c7c83a6fcec72bb14822a16e3dda",
+    "semantic_hash": ""
+  },
+  "cmd/signals.go": {
+    "mtime": 1780001663.1270242,
+    "ast_hash": "7cea4b39d6442d06c1f2f89c9e54e08f",
+    "semantic_hash": ""
+  },
+  "cmd/ta.go": {
+    "mtime": 1780001661.7363098,
+    "ast_hash": "bea88d8f4efb684fce790f506623730e",
+    "semantic_hash": ""
+  },
+  "cmd/tui.go": {
+    "mtime": 1780001665.620587,
+    "ast_hash": "7423384d50f4c0d3702eb50488a6a57a",
+    "semantic_hash": ""
+  },
+  "internal/altfins/client.go": {
+    "mtime": 1773861951.1059415,
+    "ast_hash": "912580a89520c5c75dc359ece45e2d41",
+    "semantic_hash": ""
+  },
+  "internal/altfins/client_test.go": {
+    "mtime": 1779652392.8270664,
+    "ast_hash": "52f1d1a771cc9b9aa2ad941012f7fcde",
+    "semantic_hash": ""
+  },
+  "internal/altfins/types.go": {
+    "mtime": 1779652392.5097797,
+    "ast_hash": "f70a64ad69f359bf2b6335d6038c4b1d",
+    "semantic_hash": ""
+  },
+  "internal/app/context.go": {
+    "mtime": 1773861951.1060154,
+    "ast_hash": "a8cec7cfa561414730a7a79c66d538ba",
+    "semantic_hash": ""
+  },
+  "internal/app/filters.go": {
+    "mtime": 1773861951.10615,
+    "ast_hash": "95aeccc66da5adb510037e8f63adb455",
+    "semantic_hash": ""
+  },
+  "internal/app/output.go": {
+    "mtime": 1779651868.909995,
+    "ast_hash": "78bcf4aac76d1d5f1bdd00b5a2f6ff27",
+    "semantic_hash": ""
+  },
+  "internal/app/output_test.go": {
+    "mtime": 1773912124.5809836,
+    "ast_hash": "2b5d5b9c6be4693725d254325fe6e31c",
+    "semantic_hash": ""
+  },
+  "internal/app/runtime.go": {
+    "mtime": 1780003275.8250954,
+    "ast_hash": "7294068ff509d091ca14fde9b1e6a526",
+    "semantic_hash": ""
+  },
+  "internal/app/runtime_test.go": {
+    "mtime": 1773871725.2237115,
+    "ast_hash": "beaef40a983b6f07a596826b17279f50",
+    "semantic_hash": ""
+  },
+  "internal/config/config.go": {
+    "mtime": 1780002146.9562654,
+    "ast_hash": "26a3bbb439410cd6eb5756590dd2f694",
+    "semantic_hash": ""
+  },
+  "internal/config/config_test.go": {
+    "mtime": 1773912124.5813048,
+    "ast_hash": "c38b52e9505d28841cfd12f4c6d77d09",
+    "semantic_hash": ""
+  },
+  "internal/tui/browser.go": {
+    "mtime": 1773871759.318039,
+    "ast_hash": "a9312029ce672be4828cca8baf556ad2",
+    "semantic_hash": ""
+  },
+  "internal/tui/browser_test.go": {
+    "mtime": 1773871785.7315228,
+    "ast_hash": "5576f35ebf9d64d486bbc5e0a3be6d54",
+    "semantic_hash": ""
+  },
+  "internal/tui/chart.go": {
+    "mtime": 1773866942.0476851,
+    "ast_hash": "23ab9aa05ccc948e38d2db9665eaf6e3",
+    "semantic_hash": ""
+  },
+  "internal/tui/chart_test.go": {
+    "mtime": 1773866887.0060298,
+    "ast_hash": "86358d04e561b905681915d27d93103a",
+    "semantic_hash": ""
+  },
+  "internal/tui/screens.go": {
+    "mtime": 1779651885.1782036,
+    "ast_hash": "1f675e1929ee682fe31128698b6ff9a9",
+    "semantic_hash": ""
+  },
+  "main.go": {
+    "mtime": 1773861951.1056538,
+    "ast_hash": "5cc34e33cc84086bb5feb48a3c0c2c96",
+    "semantic_hash": ""
+  },
+  "openapi/altfins-openapi.json": {
+    "mtime": 1779651934.0,
+    "ast_hash": "5b83e009233bd9b6ea91c51ad2aee9bc",
+    "semantic_hash": ""
+  },
+  "openapi/contract_test.go": {
+    "mtime": 1779651940.038208,
+    "ast_hash": "cfff5afb5ff2af43c796a85f943094cf",
+    "semantic_hash": ""
+  },
+  ".github/workflows/ci.yml": {
+    "mtime": 1773862631.3529115,
+    "ast_hash": "19899be2c1af7504d886600342c72d33",
+    "semantic_hash": ""
+  },
+  ".goreleaser.yml": {
+    "mtime": 1779723637.9156787,
+    "ast_hash": "c806d908a758466d14f4beb5b9dafeab",
+    "semantic_hash": ""
+  },
+  "CONTRIBUTING.md": {
+    "mtime": 1780001989.04756,
+    "ast_hash": "f321c13491109d585fabc32f3362cd42",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1780003410.071608,
+    "ast_hash": "e2904fc444873b798411a47e929d043e",
+    "semantic_hash": ""
+  },
+  "docs/releasing.md": {
+    "mtime": 1773870819.8613641,
+    "ast_hash": "b92f6268028742b2c3423cdc02ec0541",
+    "semantic_hash": ""
+  },
+  "docs/winget.md": {
+    "mtime": 1773870819.8612268,
+    "ast_hash": "7aa781f318516911be8ce7fbff5101b7",
+    "semantic_hash": ""
+  },
+  "docs/assets/tui-markets.svg": {
+    "mtime": 1773867221.5434403,
+    "ast_hash": "973507486a5b32edb7e9dc1ab74bb140",
+    "semantic_hash": ""
+  },
+  "docs/assets/tui-signals.svg": {
+    "mtime": 1773863607.2755604,
+    "ast_hash": "60afd4ca5bfd34259744875bcc8dc6e7",
+    "semantic_hash": ""
+  }
+}
