@@ -90,6 +90,33 @@ func TestPortfolioRedactionRecurses(t *testing.T) {
 	}
 }
 
+func TestPortfolioRedactsStringArraysByParentKey(t *testing.T) {
+	// Scalars nested inside arrays must be classified by their parent key, not
+	// leaked because the key was lost during array recursion.
+	sample := func() map[string]any {
+		return map[string]any{
+			"walletAddresses": []any{"0xabc111", "0xdef222"}, // address-class -> masked by default
+			"emails":          []any{"a@x.com"},               // unknown string -> masked by default
+			"symbols":         []any{"BTC", "ETH"},            // safe display -> visible
+		}
+	}
+	def := redactPortfolio(sample(), false, false).(map[string]any)
+	if def["walletAddresses"].([]any)[0] == "0xabc111" {
+		t.Error("string in a walletAddresses array must be masked by default")
+	}
+	if def["emails"].([]any)[0] == "a@x.com" {
+		t.Error("string in an unknown 'emails' array must be masked by default")
+	}
+	if def["symbols"].([]any)[0] != "BTC" {
+		t.Errorf("safe 'symbols' array values must stay visible, got %v", def["symbols"])
+	}
+
+	full := redactPortfolio(sample(), true, false).(map[string]any)
+	if full["walletAddresses"].([]any)[0] != "0xabc111" {
+		t.Errorf("--full must reveal addresses in arrays, got %v", full["walletAddresses"])
+	}
+}
+
 func TestPortfolioMasksUnknownStringsByDefault(t *testing.T) {
 	// Unverified portfolio shape: any unrecognized string leaf (PII like email /
 	// accountNumber) must be masked by default and revealed only with --full.

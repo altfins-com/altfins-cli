@@ -110,11 +110,19 @@ func isEmptyResult(value any) bool {
 // masked unless --full. Numbers and booleans pass through unless their key is
 // secret/address-class.
 func redactPortfolio(value any, full, maskBalances bool) any {
+	return redactPortfolioValue("", value, full, maskBalances)
+}
+
+// redactPortfolioValue is the key-aware walker. parentKey is the lower-cased map
+// key under which value sits; it is carried into array elements so that scalars
+// nested inside arrays (e.g. {"walletAddresses":[...]}, {"emails":[...]}) are
+// classified by their parent key rather than leaking because the key was lost.
+func redactPortfolioValue(parentKey string, value any, full, maskBalances bool) any {
 	switch v := value.(type) {
 	case []map[string]any:
 		out := make([]map[string]any, 0, len(v))
 		for _, item := range v {
-			if m, ok := redactPortfolio(item, full, maskBalances).(map[string]any); ok {
+			if m, ok := redactPortfolioValue(parentKey, item, full, maskBalances).(map[string]any); ok {
 				out = append(out, m)
 			}
 		}
@@ -122,23 +130,20 @@ func redactPortfolio(value any, full, maskBalances bool) any {
 	case map[string]any:
 		out := make(map[string]any, len(v))
 		for key, child := range v {
-			lk := strings.ToLower(key)
-			switch child.(type) {
-			case map[string]any, []any:
-				out[key] = redactPortfolio(child, full, maskBalances)
-			default:
-				out[key] = redactScalar(lk, child, full, maskBalances)
-			}
+			out[key] = redactPortfolioValue(strings.ToLower(key), child, full, maskBalances)
 		}
 		return out
 	case []any:
 		out := make([]any, len(v))
 		for i, child := range v {
-			out[i] = redactPortfolio(child, full, maskBalances)
+			out[i] = redactPortfolioValue(parentKey, child, full, maskBalances)
 		}
 		return out
 	default:
-		return value
+		if parentKey == "" {
+			return value
+		}
+		return redactScalar(parentKey, value, full, maskBalances)
 	}
 }
 
