@@ -12,10 +12,23 @@ import (
 	"time"
 )
 
-// mcpUserAgent is sent on every MCP request. The altFINS MCP server sits behind
+// The User-Agent is sent on every MCP request. The altFINS MCP server sits behind
 // a WAF that returns 403 to requests without a User-Agent, so this is mandatory
-// (the REST client sends none and must stay that way).
-const mcpUserAgent = "altfins-cli"
+// (the REST client sends none and must stay that way). UserAgentVersion is set by
+// the CLI entrypoint to the build version so the header is `altfins-cli/<version>`.
+const mcpUserAgentBase = "altfins-cli"
+
+// UserAgentVersion is the CLI build version, set once at startup by package cmd.
+var UserAgentVersion = "dev"
+
+func mcpUserAgent() string {
+	return mcpUserAgentBase + "/" + UserAgentVersion
+}
+
+// mcpCallTimeout bounds an entire CallTool (initialize + notification + tools/call,
+// each with its own retries), so a hung server fails fast instead of blocking for
+// the sum of every per-request timeout.
+const mcpCallTimeout = 90 * time.Second
 
 const mcpProtocolVersion = "2024-11-05"
 
@@ -109,12 +122,14 @@ type mcpToolResult struct {
 	IsError           bool            `json:"isError"`
 }
 
-func rpcEnvelope(id int, method string, params any) map[string]any {
+// rpcEnvelope builds a JSON-RPC 2.0 request or notification. A nil id means a
+// notification (no id field); any non-nil id (including 0) is a request id.
+func rpcEnvelope(id any, method string, params any) map[string]any {
 	env := map[string]any{
 		"jsonrpc": "2.0",
 		"method":  method,
 	}
-	if id > 0 {
+	if id != nil {
 		env["id"] = id
 	}
 	if params != nil {
@@ -127,7 +142,7 @@ func (c *MCPClient) previewFor(tool string, args map[string]any) RequestPreview 
 	headers := map[string]string{
 		"Accept":       "application/json, text/event-stream",
 		"Content-Type": "application/json",
-		"User-Agent":   mcpUserAgent,
+		"User-Agent":   mcpUserAgent(),
 	}
 	if c.apiKey != "" {
 		headers["X-Api-Key"] = "redacted"
@@ -135,7 +150,7 @@ func (c *MCPClient) previewFor(tool string, args map[string]any) RequestPreview 
 	return RequestPreview{
 		Method:     http.MethodPost,
 		URL:        c.url,
-		Body:       rpcEnvelope(1, "tools/call", map[string]any{"name": tool, "arguments": args}),
+		Body:       rpcEnvelope(2, "tools/call", map[string]any{"name": tool, "arguments": args}),
 		Headers:    headers,
 		AuthSource: c.authSource,
 	}
@@ -152,18 +167,27 @@ func (c *MCPClient) CallTool(ctx context.Context, tool string, args map[string]a
 		return &DryRunError{Preview: c.previewFor(tool, args)}
 	}
 
+	ctx, cancel := context.WithTimeout(ctx, mcpCallTimeout)
+	defer cancel()
+
 	// Streamable-HTTP MCP requires an initialize handshake before tool calls.
 	initParams := map[string]any{
 		"protocolVersion": mcpProtocolVersion,
 		"capabilities":    map[string]any{},
-		"clientInfo":      map[string]any{"name": mcpUserAgent, "version": "1"},
+		"clientInfo":      map[string]any{"name": mcpUserAgentBase, "version": UserAgentVersion},
 	}
-	_, sessionID, err := c.roundtrip(ctx, rpcEnvelope(1, "initialize", initParams), "")
+	initResp, sessionID, err := c.roundtrip(ctx, rpcEnvelope(1, "initialize", initParams), "")
 	if err != nil {
 		return err
 	}
+	// A JSON-RPC error on initialize (unsupported protocol/session negotiation)
+	// must surface here, not as a misleading later tool-call failure.
+	var initRPC rpcResponse
+	if err := json.Unmarshal(initResp, &initRPC); err == nil && initRPC.Error != nil {
+		return &MCPError{RPCCode: initRPC.Error.Code, Message: "initialize failed: " + initRPC.Error.Message}
+	}
 	// Best-effort initialized notification (no id, no result expected).
-	_, _, _ = c.roundtrip(ctx, rpcEnvelope(0, "notifications/initialized", map[string]any{}), sessionID)
+	_, _, _ = c.roundtrip(ctx, rpcEnvelope(nil, "notifications/initialized", map[string]any{}), sessionID)
 
 	callParams := map[string]any{"name": tool, "arguments": args}
 	resp, _, err := c.roundtrip(ctx, rpcEnvelope(2, "tools/call", callParams), sessionID)
@@ -231,7 +255,7 @@ func (c *MCPClient) roundtrip(ctx context.Context, payload map[string]any, sessi
 		}
 		req.Header.Set("Accept", "application/json, text/event-stream")
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("User-Agent", mcpUserAgent)
+		req.Header.Set("User-Agent", mcpUserAgent())
 		if c.apiKey != "" {
 			req.Header.Set("X-Api-Key", c.apiKey)
 		}
@@ -259,8 +283,11 @@ func (c *MCPClient) roundtrip(ctx context.Context, payload map[string]any, sessi
 		if newSession == "" {
 			newSession = sessionID
 		}
-		raw, _ := io.ReadAll(resp.Body)
+		raw, readErr := io.ReadAll(resp.Body)
 		resp.Body.Close()
+		if readErr != nil {
+			return nil, newSession, &MCPError{HTTPStatus: resp.StatusCode, Message: fmt.Sprintf("read MCP response body: %v", readErr)}
+		}
 
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 			return nil, newSession, &MCPError{HTTPStatus: resp.StatusCode, Message: mcpErrorBody(raw)}
@@ -271,23 +298,19 @@ func (c *MCPClient) roundtrip(ctx context.Context, payload map[string]any, sessi
 }
 
 // extractRPCBytes returns the JSON object from an MCP response body, which may be
-// either a plain JSON object or a Server-Sent-Events stream (`data: {...}` lines).
+// a plain JSON object or a Server-Sent-Events stream (`data: {...}`). It takes the
+// payload after the LAST `data:` marker so that pretty-printed/multi-line JSON
+// inside an SSE event is preserved (a per-line `{`-prefix scan would lose all but
+// the first line of a multi-line object).
 func extractRPCBytes(raw []byte) []byte {
 	trimmed := bytes.TrimSpace(raw)
 	if len(trimmed) > 0 && trimmed[0] == '{' {
 		return trimmed
 	}
-	var last []byte
-	for _, line := range bytes.Split(raw, []byte("\n")) {
-		line = bytes.TrimSpace(line)
-		if bytes.HasPrefix(line, []byte("data:")) {
-			line = bytes.TrimSpace(line[len("data:"):])
-		}
-		if len(line) > 0 && line[0] == '{' {
-			last = line
-		}
+	if idx := bytes.LastIndex(raw, []byte("data:")); idx != -1 {
+		return bytes.TrimSpace(raw[idx+len("data:"):])
 	}
-	return last
+	return trimmed
 }
 
 func mcpErrorBody(raw []byte) string {

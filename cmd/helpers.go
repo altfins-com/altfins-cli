@@ -95,7 +95,7 @@ func mcpListValue(raw json.RawMessage) any {
 	}
 	var asObject map[string]any
 	if err := json.Unmarshal(raw, &asObject); err == nil {
-		for _, key := range []string{"content", "data", "items", "results"} {
+		for _, key := range []string{"content", "data", "items", "results", "events", "holdings", "wallets", "balances", "portfolio", "exchanges"} {
 			if inner, ok := asObject[key].([]any); ok {
 				return toMapSlice(inner)
 			}

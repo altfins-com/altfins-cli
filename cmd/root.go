@@ -8,10 +8,16 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/altfins-com/altfins-cli/internal/altfins"
 	"github.com/altfins-com/altfins-cli/internal/app"
 )
 
 var version = "dev"
+
+func init() {
+	// Propagate the build version into the MCP client's User-Agent.
+	altfins.UserAgentVersion = version
+}
 
 type exitCoder interface {
 	ExitCode() int

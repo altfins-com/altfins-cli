@@ -26,6 +26,30 @@ func TestResolveUsesEnvOverConfig(t *testing.T) {
 	}
 }
 
+func TestClearAPIKeyPreservesCustomMCPURL(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := os.WriteFile(path, []byte(`{"api_key":"k","mcp_url":"https://staging.mcp.example/mcp"}`), 0o600); err != nil {
+		t.Fatalf("seed config: %v", err)
+	}
+	manager := NewManagerAt(path)
+	if err := manager.ClearAPIKey(); err != nil {
+		t.Fatalf("clear api key: %v", err)
+	}
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("config file must be kept when a custom mcp_url is set: %v", err)
+	}
+	settings, err := manager.Load()
+	if err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+	if settings.MCPURL != "https://staging.mcp.example/mcp" {
+		t.Errorf("custom mcp_url must survive auth clear, got %q", settings.MCPURL)
+	}
+	if settings.APIKey != "" {
+		t.Errorf("api key must be cleared, got %q", settings.APIKey)
+	}
+}
+
 func TestSaveAPIKeyUsesStrictPermissions(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "af", "config.json")
 	manager := NewManagerAt(path)

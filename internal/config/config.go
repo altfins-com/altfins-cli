@@ -152,7 +152,9 @@ func (m *Manager) ClearAPIKey() error {
 		return err
 	}
 	current.APIKey = ""
-	if strings.TrimSpace(current.BaseURL) == "" || current.BaseURL == DefaultBaseURL {
+	baseDefault := strings.TrimSpace(current.BaseURL) == "" || current.BaseURL == DefaultBaseURL
+	mcpDefault := strings.TrimSpace(current.MCPURL) == "" || current.MCPURL == DefaultMCPURL
+	if baseDefault && mcpDefault {
 		if err := os.Remove(m.path); err != nil && !os.IsNotExist(err) {
 			return fmt.Errorf("remove config file: %w", err)
 		}

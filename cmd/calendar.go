@@ -26,6 +26,16 @@ var calendarMyData = []string{
 var calendarSortFields = []string{"dateEvent", "createdDate"}
 var calendarSortDirections = []string{"ASC", "DESC"}
 
+// calendarDefaultColumns is the curated default table/csv column set. The output
+// layer keeps only those that are present in the response, so this is a superset
+// of the useful scalar fields (it deliberately excludes the verbose nested
+// securityIdentifier object that would otherwise render as an inline JSON blob).
+var calendarDefaultColumns = []string{
+	"dateEvent", "createdDate", "title", "description",
+	"category", "coinMarketCalCategories", "assetSymbols", "symbol",
+	"hot", "trending", "significant", "id",
+}
+
 // calendarAllowedKeys is the full set of arguments getCryptoCalendarEvents
 // accepts. Raw --filter/--stdin-json JSON is validated against it because the MCP
 // input schema is additionalProperties:false.
@@ -74,45 +84,32 @@ func newCalendarCommand() *cobra.Command {
 			}
 
 			// First-class flags override raw --filter JSON. Strings are sent only
-			// when non-empty; booleans only when explicitly set.
-			setStr := func(flag, key, value string) {
-				if cmd.Flags().Changed(flag) || value != "" {
-					if value != "" {
-						callArgs[key] = value
-					}
+			// when non-empty; booleans only when true (false == "no filter").
+			setStr := func(key, value string) {
+				if value != "" {
+					callArgs[key] = value
 				}
 			}
-			setStr("quick-search", "quickSearch", quickSearch)
-			setStr("release-from", "releaseFrom", releaseFrom)
-			setStr("release-to", "releaseTo", releaseTo)
-			setStr("event-from", "eventFrom", eventFrom)
-			setStr("event-to", "eventTo", eventTo)
-			setStr("title-keyword", "titleKeyword", titleKeyword)
-			setStr("description-keyword", "descriptionKeyword", descriptionKeyword)
-			setStr("symbols", "assetSymbols", symbols)
-
-			if category != "" {
-				values := csvValues(category)
-				if err := validateEnum("category", values, calendarCategories); err != nil {
-					return err
-				}
-				callArgs["category"] = strings.Join(values, ",")
+			setStr("quickSearch", quickSearch)
+			setStr("releaseFrom", releaseFrom)
+			setStr("releaseTo", releaseTo)
+			setStr("eventFrom", eventFrom)
+			setStr("eventTo", eventTo)
+			setStr("titleKeyword", titleKeyword)
+			setStr("descriptionKeyword", descriptionKeyword)
+			setStr("assetSymbols", symbols)
+			setStr("category", category)
+			setStr("myData", myData)
+			setStr("sortField", sortField)
+			setStr("sortDirection", sortDirection)
+			if hot {
+				callArgs["voteIsHot"] = true
 			}
-			if myData != "" {
-				values := csvValues(myData)
-				if err := validateEnum("my-data", values, calendarMyData); err != nil {
-					return err
-				}
-				callArgs["myData"] = strings.Join(values, ",")
+			if trending {
+				callArgs["voteIsTrending"] = true
 			}
-			if cmd.Flags().Changed("hot") {
-				callArgs["voteIsHot"] = hot
-			}
-			if cmd.Flags().Changed("trending") {
-				callArgs["voteIsTrending"] = trending
-			}
-			if cmd.Flags().Changed("significant") {
-				callArgs["voteIsSignificant"] = significant
+			if significant {
+				callArgs["voteIsSignificant"] = true
 			}
 			if cmd.Flags().Changed("page") {
 				callArgs["page"] = page
@@ -120,18 +117,11 @@ func newCalendarCommand() *cobra.Command {
 			if cmd.Flags().Changed("size") {
 				callArgs["size"] = size
 			}
-			if sortField != "" {
-				if err := validateEnum("sort-field", []string{sortField}, calendarSortFields); err != nil {
-					return err
-				}
-				callArgs["sortField"] = sortField
-			}
-			if sortDirection != "" {
-				normalized := strings.ToUpper(sortDirection)
-				if err := validateEnum("sort-direction", []string{normalized}, calendarSortDirections); err != nil {
-					return err
-				}
-				callArgs["sortDirection"] = normalized
+
+			// Normalize + validate enum/CSV values uniformly, whether they came
+			// from a first-class flag or from raw --filter/--stdin-json JSON.
+			if err := normalizeAndValidateCalendarArgs(callArgs); err != nil {
+				return err
 			}
 
 			var raw json.RawMessage
@@ -139,7 +129,11 @@ func newCalendarCommand() *cobra.Command {
 			if callErr != nil {
 				return handleResult(cmd, nil, callErr)
 			}
-			return handleResult(cmd, mcpListValue(raw), nil)
+			value := mcpListValue(raw)
+			if factory, ferr := factoryFor(cmd); ferr == nil {
+				value = applyDefaultColumns(value, factory.Options.Output, factory.Options.Fields, calendarDefaultColumns)
+			}
+			return handleResult(cmd, value, nil)
 		},
 	}
 	markMCPQuery(listCmd, "getCryptoCalendarEvents")
@@ -186,6 +180,85 @@ func validateEnum(flag string, values, allowed []string) error {
 		}
 	}
 	return nil
+}
+
+// normalizeAndValidateCalendarArgs validates enum values and string typing for the
+// calendar args regardless of whether they came from a first-class flag or raw
+// --filter JSON. It upper-cases category/myData/sortDirection (sortField stays
+// exact-case) so the raw escape hatch gets the same validation the flags do.
+func normalizeAndValidateCalendarArgs(args map[string]any) error {
+	stringParams := []string{
+		"quickSearch", "releaseFrom", "releaseTo", "eventFrom", "eventTo",
+		"titleKeyword", "descriptionKeyword", "assetSymbols", "category", "myData",
+		"sortField", "sortDirection",
+	}
+	for _, key := range stringParams {
+		if v, ok := args[key]; ok {
+			if _, isStr := v.(string); !isStr {
+				return fmt.Errorf("calendar arg %q must be a string (got %T); the MCP schema is string/CSV, not an array", key, v)
+			}
+		}
+	}
+	if v, _ := args["category"].(string); v != "" {
+		vals := csvValues(strings.ToUpper(v))
+		if err := validateEnum("category", vals, calendarCategories); err != nil {
+			return err
+		}
+		args["category"] = strings.Join(vals, ",")
+	}
+	if v, _ := args["myData"].(string); v != "" {
+		vals := csvValues(strings.ToUpper(v))
+		if err := validateEnum("my-data", vals, calendarMyData); err != nil {
+			return err
+		}
+		args["myData"] = strings.Join(vals, ",")
+	}
+	if v, _ := args["sortField"].(string); v != "" {
+		if err := validateEnum("sort-field", []string{v}, calendarSortFields); err != nil {
+			return err
+		}
+	}
+	if v, _ := args["sortDirection"].(string); v != "" {
+		norm := strings.ToUpper(v)
+		if err := validateEnum("sort-direction", []string{norm}, calendarSortDirections); err != nil {
+			return err
+		}
+		args["sortDirection"] = norm
+	}
+	return nil
+}
+
+// applyDefaultColumns projects each result row to the curated column set for the
+// default table/csv view (no explicit --fields). Rows keep only the columns that
+// exist; a row matching none is left untouched so a response-shape change degrades
+// gracefully instead of rendering blank.
+func applyDefaultColumns(value any, output string, fields, columns []string) any {
+	if !isTableMode(output) || len(fields) > 0 {
+		return value
+	}
+	items, ok := value.([]map[string]any)
+	if !ok {
+		return value
+	}
+	allow := make(map[string]struct{}, len(columns))
+	for _, c := range columns {
+		allow[c] = struct{}{}
+	}
+	out := make([]map[string]any, 0, len(items))
+	for _, item := range items {
+		projected := make(map[string]any, len(columns))
+		for key, val := range item {
+			if _, ok := allow[key]; ok {
+				projected[key] = val
+			}
+		}
+		if len(projected) == 0 {
+			out = append(out, item)
+			continue
+		}
+		out = append(out, projected)
+	}
+	return out
 }
 
 func allowedKeyList() string {

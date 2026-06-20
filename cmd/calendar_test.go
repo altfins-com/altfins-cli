@@ -79,6 +79,46 @@ func TestCalendarRejectsUnknownFilterKey(t *testing.T) {
 	}
 }
 
+func TestCalendarRawFilterValidatesEnum(t *testing.T) {
+	isolatedConfig(t)
+	// An invalid enum value supplied via raw --filter must be rejected too, not
+	// only via the first-class --category flag.
+	if _, err := runCLI(t, nil, "--dry-run", "calendar", "list", "--filter", `{"category":"NOPE"}`); err == nil {
+		t.Fatal("expected error for invalid enum value in raw --filter")
+	}
+}
+
+func TestCalendarRawFilterRejectsArrayForStringParam(t *testing.T) {
+	isolatedConfig(t)
+	// assetSymbols is a string (CSV) per the MCP schema; an array must be rejected.
+	if _, err := runCLI(t, nil, "--dry-run", "calendar", "list", "--filter", `{"assetSymbols":["BTC","ETH"]}`); err == nil {
+		t.Fatal("expected error for array value on a string-typed param")
+	}
+}
+
+func TestCalendarCategoryCaseInsensitive(t *testing.T) {
+	isolatedConfig(t)
+	t.Setenv("ALTFINS_API_KEY", "TEST-DUMMY-KEY")
+	out, err := runCLI(t, nil, "--dry-run", "calendar", "list", "--category", "airdrop", "-o", "json")
+	if err != nil {
+		t.Fatalf("lowercase --category should be accepted: %v (out=%s)", err, out)
+	}
+	var preview mcpPreview
+	if err := json.Unmarshal([]byte(out), &preview); err != nil {
+		t.Fatalf("parse preview: %v", err)
+	}
+	if preview.Body.Params.Arguments["category"] != "AIRDROP" {
+		t.Errorf("category should be normalized to AIRDROP, got %v", preview.Body.Params.Arguments["category"])
+	}
+}
+
+func TestCalendarKeylessDryRun(t *testing.T) {
+	isolatedConfig(t) // no API key
+	if _, err := runCLI(t, nil, "--dry-run", "calendar", "list", "-o", "json"); err != nil {
+		t.Fatalf("dry-run must work without an API key, got: %v", err)
+	}
+}
+
 func TestCalendarCategoriesIsLocal(t *testing.T) {
 	isolatedConfig(t)
 	out, err := runCLI(t, nil, "calendar", "categories", "-o", "json")
