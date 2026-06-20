@@ -220,6 +220,29 @@ af news list --from 2026-03-01
 af news get --message-id 12345 --source-id 12
 ```
 
+### Calendar and Portfolio (MCP-backed)
+
+`af calendar` and `af portfolio` are served by the altFINS MCP server
+(`https://mcp.altfins.com/mcp`, JSON-RPC) rather than the public REST API, using the same
+stored API key. They behave like the other read commands: same output formats, `--fields`,
+and `--dry-run` (which prints the JSON-RPC request without spending a permit). Override the
+endpoint with `ALTFINS_MCP_URL` if needed.
+
+```bash
+# Upcoming events. Dates accept ISO-8601 OR natural language ("today", "last 7 days") and are
+# passed to the server verbatim — use --event-from/--to for when it happens, --release-from/--to
+# for when it was announced. See `af calendar categories` for the --category values.
+af calendar list --symbols BTC,ETH --event-from today --event-to "this month" -o json
+af calendar list --category AIRDROP,EXCHANGE --hot --sort-field dateEvent --sort-direction DESC
+af calendar categories
+
+# Authenticated portfolio (account-private). Wallet addresses are redacted by default; use
+# --full to reveal them, --mask-balances to hide balances, or --fields symbol for symbols only.
+af portfolio show
+af portfolio show --fields symbol -o json
+af portfolio show --dry-run -o json     # preview the request, no data fetched
+```
+
 ## TUI Experience
 
 Launch any of the full-screen terminal views:

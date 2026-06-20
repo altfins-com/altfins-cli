@@ -6,6 +6,9 @@ import (
 	"testing"
 )
 
+// Note: `af calendar` and `af portfolio` are intentionally absent from this REST
+// contract. They are backed by the altFINS MCP server (JSON-RPC tools/call), not
+// the public REST API, so they have no path in altfins-openapi.json by design.
 func TestOpenAPISnapshotContainsRequiredPaths(t *testing.T) {
 	data, err := os.ReadFile("altfins-openapi.json")
 	if err != nil {

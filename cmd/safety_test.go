@@ -265,6 +265,9 @@ func TestCommandsJSONExposesSafety(t *testing.T) {
 	check("af signals list", OpRemoteQuery, true)
 	check("af tui signals", OpInteractive, false)
 	check("af auth status", OpRead, false)
+	check("af calendar list", OpRemoteQuery, true)
+	check("af calendar categories", OpRead, false)
+	check("af portfolio show", OpRemoteQuery, true)
 
 	if s := byPath["af auth clear"]; s == nil || !s.ConfirmationRequired || len(s.ConfirmationFlags) == 0 || s.ConfirmationExitCode != app.ConfirmationRequiredExitCode {
 		t.Errorf("af auth clear must advertise confirmationRequired with flags and confirmationExitCode=%d, got %+v", app.ConfirmationRequiredExitCode, s)

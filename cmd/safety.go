@@ -98,6 +98,18 @@ func markRemoteQuery(cmd *cobra.Command, method, path string) {
 	})
 }
 
+// markMCPQuery annotates a networked read backed by the altFINS MCP server
+// (JSON-RPC tools/call) rather than the REST API. It is still a remote_query:
+// it mutates nothing and is safe to --dry-run. The endpoint metadata records the
+// MCP tool name so `af commands -o json` consumers can see what it calls.
+func markMCPQuery(cmd *cobra.Command, toolName string) {
+	annotateEndpoint(cmd, "MCP", "tools/call:"+toolName)
+	annotateSafety(cmd, safetyMeta{
+		OperationType:   OpRemoteQuery,
+		DryRunSupported: true,
+	})
+}
+
 // markInteractive annotates a TUI command. Interactive UIs cannot be dry-run.
 func markInteractive(cmd *cobra.Command, path string) {
 	annotateEndpoint(cmd, "TUI", path)

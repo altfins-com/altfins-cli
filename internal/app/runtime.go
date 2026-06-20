@@ -103,6 +103,26 @@ func (f *Factory) NewClient() (*altfins.Client, error) {
 	}), nil
 }
 
+// NewMCPClient builds the MCP (JSON-RPC) client for MCP-backed commands
+// (calendar, portfolio). It mirrors NewClient: it shares the stored API key and
+// fails closed with an AuthRequiredError (exit 3) when no key is configured and
+// the command is not a dry-run.
+func (f *Factory) NewMCPClient() (*altfins.MCPClient, error) {
+	resolved, err := f.ResolveConfig()
+	if err != nil {
+		return nil, err
+	}
+	if !resolved.HasAPIKey && !f.Options.DryRun {
+		return nil, &AuthRequiredError{Message: "altFINS API key not configured. Run `af auth set` or export ALTFINS_API_KEY."}
+	}
+	return altfins.NewMCPClient(altfins.MCPClientConfig{
+		URL:        resolved.MCPURL,
+		APIKey:     resolved.APIKey,
+		AuthSource: resolved.AuthSource,
+		DryRun:     f.Options.DryRun,
+	}), nil
+}
+
 func (f *Factory) WriteOutput(data any) error {
 	return WriteOutput(f.Stdout, data, f.Options.Output, f.Options.Fields)
 }

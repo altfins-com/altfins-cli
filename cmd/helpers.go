@@ -71,6 +71,56 @@ func clientFor(cmd *cobra.Command) (*altfins.Client, error) {
 	return factory.NewClient()
 }
 
+func mcpClientFor(cmd *cobra.Command) (*altfins.MCPClient, error) {
+	factory, err := factoryFor(cmd)
+	if err != nil {
+		return nil, err
+	}
+	return factory.NewMCPClient()
+}
+
+// mcpListValue normalizes a decoded MCP tool payload into the shape the output
+// layer renders best: a list of objects when the payload is an array (or an
+// object wrapping a `content`/`data`/`items` array), otherwise the object (or
+// the raw value) as-is. It keeps unknown response shapes printable without
+// pinning typed structs the server has not been sampled against yet.
+func mcpListValue(raw json.RawMessage) any {
+	trimmed := strings.TrimSpace(string(raw))
+	if trimmed == "" || trimmed == "null" {
+		return []map[string]any{}
+	}
+	var asList []map[string]any
+	if err := json.Unmarshal(raw, &asList); err == nil {
+		return asList
+	}
+	var asObject map[string]any
+	if err := json.Unmarshal(raw, &asObject); err == nil {
+		for _, key := range []string{"content", "data", "items", "results"} {
+			if inner, ok := asObject[key].([]any); ok {
+				return toMapSlice(inner)
+			}
+		}
+		return asObject
+	}
+	var anyVal any
+	if err := json.Unmarshal(raw, &anyVal); err == nil {
+		return anyVal
+	}
+	return trimmed
+}
+
+func toMapSlice(items []any) []map[string]any {
+	out := make([]map[string]any, 0, len(items))
+	for _, item := range items {
+		if m, ok := item.(map[string]any); ok {
+			out = append(out, m)
+		} else {
+			out = append(out, map[string]any{"value": item})
+		}
+	}
+	return out
+}
+
 func handleResult(cmd *cobra.Command, data any, err error) error {
 	factory, factoryErr := factoryFor(cmd)
 	if factoryErr != nil {

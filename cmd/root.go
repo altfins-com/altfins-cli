@@ -85,6 +85,8 @@ func NewRootCommand() *cobra.Command {
 		newTACommand(),
 		newSignalsCommand(),
 		newNewsCommand(),
+		newCalendarCommand(),
+		newPortfolioCommand(),
 		newTUICommand(),
 	)
 	root.AddCommand(newCommandsCommand(root))

@@ -14,11 +14,16 @@ import (
 const (
 	DefaultAppName = "af"
 	DefaultBaseURL = "https://altfins.com"
+	// DefaultMCPURL is the altFINS MCP server (Streamable HTTP / JSON-RPC). It is a
+	// different host than the REST base URL, so it has its own setting rather than
+	// being derived from base_url. Used by the MCP-backed commands (calendar, portfolio).
+	DefaultMCPURL = "https://mcp.altfins.com/mcp"
 )
 
 type Settings struct {
 	APIKey  string `json:"api_key,omitempty" mapstructure:"api_key"`
 	BaseURL string `json:"base_url,omitempty" mapstructure:"base_url"`
+	MCPURL  string `json:"mcp_url,omitempty" mapstructure:"mcp_url"`
 }
 
 type Resolved struct {
@@ -63,8 +68,10 @@ func (m *Manager) Load() (Settings, error) {
 	v.SetConfigFile(m.path)
 	v.SetConfigType("json")
 	v.SetDefault("base_url", DefaultBaseURL)
+	v.SetDefault("mcp_url", DefaultMCPURL)
 	v.BindEnv("api_key", "ALTFINS_API_KEY")
 	v.BindEnv("base_url", "ALTFINS_BASE_URL")
+	v.BindEnv("mcp_url", "ALTFINS_MCP_URL")
 	v.AutomaticEnv()
 
 	if err := v.ReadInConfig(); err != nil {
@@ -82,6 +89,10 @@ func (m *Manager) Load() (Settings, error) {
 	out.BaseURL = strings.TrimSpace(out.BaseURL)
 	if out.BaseURL == "" {
 		out.BaseURL = DefaultBaseURL
+	}
+	out.MCPURL = strings.TrimSpace(out.MCPURL)
+	if out.MCPURL == "" {
+		out.MCPURL = DefaultMCPURL
 	}
 	return out, nil
 }

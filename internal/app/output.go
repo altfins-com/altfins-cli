@@ -114,6 +114,10 @@ func toJSONItems(data any) []any {
 		return toAnySlice(value)
 	case []altfins.OHLCVData:
 		return toAnySlice(value)
+	case []map[string]any:
+		return toAnySlice(value)
+	case map[string]any:
+		return []any{value}
 	default:
 		return []any{data}
 	}
