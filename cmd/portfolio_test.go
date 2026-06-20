@@ -90,13 +90,33 @@ func TestPortfolioRedactionRecurses(t *testing.T) {
 	}
 }
 
-func TestPortfolioDropAddressKeys(t *testing.T) {
-	items := []map[string]any{{"symbol": "ETH", "walletAddress": "0xabc", "balance": "1"}}
-	out := dropAddressKeys(items).([]map[string]any)[0]
-	if _, present := out["walletAddress"]; present {
-		t.Error("dropAddressKeys must remove walletAddress for the default table view")
+func TestPortfolioMasksUnknownStringsByDefault(t *testing.T) {
+	// Unverified portfolio shape: any unrecognized string leaf (PII like email /
+	// accountNumber) must be masked by default and revealed only with --full.
+	sample := func() []map[string]any {
+		return []map[string]any{{
+			"symbol":        "ETH", // safe display field -> shown
+			"email":         "user@example.com",
+			"accountNumber": "ACC-12345678",
+			"balance":       "5.0", // balance -> shown
+		}}
 	}
-	if out["symbol"] != "ETH" || out["balance"] != "1" {
-		t.Errorf("non-address fields must be preserved, got %v", out)
+	def := redactPortfolio(sample(), false, false).([]map[string]any)[0]
+	if def["email"] == "user@example.com" {
+		t.Error("unknown string field 'email' must be masked by default")
+	}
+	if def["accountNumber"] == "ACC-12345678" {
+		t.Error("'accountNumber' (account-class) must be masked by default")
+	}
+	if def["symbol"] != "ETH" {
+		t.Errorf("safe display field 'symbol' must stay visible, got %v", def["symbol"])
+	}
+	if def["balance"] != "5.0" {
+		t.Errorf("balance must stay visible by default, got %v", def["balance"])
+	}
+
+	full := redactPortfolio(sample(), true, false).([]map[string]any)[0]
+	if full["email"] != "user@example.com" {
+		t.Errorf("--full must reveal the unknown 'email' field, got %v", full["email"])
 	}
 }

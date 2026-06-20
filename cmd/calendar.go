@@ -26,14 +26,14 @@ var calendarMyData = []string{
 var calendarSortFields = []string{"dateEvent", "createdDate"}
 var calendarSortDirections = []string{"ASC", "DESC"}
 
-// calendarDefaultColumns is the curated default table/csv column set. The output
-// layer keeps only those that are present in the response, so this is a superset
-// of the useful scalar fields (it deliberately excludes the verbose nested
-// securityIdentifier object that would otherwise render as an inline JSON blob).
+// calendarDefaultColumns is the curated default table/csv column set per FINAL.md
+// (dateEvent, title, category, symbols, hot, trending, significant). The response
+// names the category field coinMarketCalCategories, so the command aliases it to
+// `category` before projection. The output layer keeps only present columns, so
+// the verbose nested securityIdentifier object is excluded.
 var calendarDefaultColumns = []string{
-	"dateEvent", "createdDate", "title", "description",
-	"category", "coinMarketCalCategories", "assetSymbols", "symbol",
-	"hot", "trending", "significant", "id",
+	"dateEvent", "title", "category", "assetSymbols", "symbols",
+	"hot", "trending", "significant",
 }
 
 // calendarAllowedKeys is the full set of arguments getCryptoCalendarEvents
@@ -131,7 +131,12 @@ func newCalendarCommand() *cobra.Command {
 			}
 			value := mcpListValue(raw)
 			if factory, ferr := factoryFor(cmd); ferr == nil {
-				value = applyDefaultColumns(value, factory.Options.Output, factory.Options.Fields, calendarDefaultColumns)
+				// Only reshape the default table/csv view; json/jsonl and explicit
+				// --fields keep the full response untouched.
+				if isTableMode(factory.Options.Output) && len(factory.Options.Fields) == 0 {
+					value = aliasCalendarCategory(value)
+					value = applyDefaultColumns(value, factory.Options.Output, nil, calendarDefaultColumns)
+				}
 			}
 			return handleResult(cmd, value, nil)
 		},
@@ -226,6 +231,29 @@ func normalizeAndValidateCalendarArgs(args map[string]any) error {
 		args["sortDirection"] = norm
 	}
 	return nil
+}
+
+// aliasCalendarCategory copies the response's coinMarketCalCategories field into a
+// `category` column (the FINAL.md column name) when no category key is present.
+func aliasCalendarCategory(value any) any {
+	items, ok := value.([]map[string]any)
+	if !ok {
+		return value
+	}
+	out := make([]map[string]any, 0, len(items))
+	for _, item := range items {
+		clone := make(map[string]any, len(item)+1)
+		for k, v := range item {
+			clone[k] = v
+		}
+		if _, has := clone["category"]; !has {
+			if cat, ok := clone["coinMarketCalCategories"]; ok {
+				clone["category"] = cat
+			}
+		}
+		out = append(out, clone)
+	}
+	return out
 }
 
 // applyDefaultColumns projects each result row to the curated column set for the

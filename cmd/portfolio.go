@@ -10,6 +10,15 @@ import (
 	"github.com/altfins-com/altfins-cli/internal/app"
 )
 
+// portfolioDefaultColumns is the curated default table/csv column set per FINAL.md.
+// The output layer keeps only those present; address columns are appended only
+// when --full. Kept small so the unverified portfolio shape degrades gracefully.
+var portfolioDefaultColumns = []string{
+	"exchange", "exchangeName", "wallet", "walletName", "source",
+	"symbol", "ticker", "asset", "currency", "name",
+	"balance", "amount", "quantity", "value",
+}
+
 func newPortfolioCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "portfolio",
@@ -23,9 +32,11 @@ func newPortfolioCommand() *cobra.Command {
 		Use:   "show",
 		Short: "Show the authenticated user's portfolio holdings",
 		Long: "Show the authenticated user's crypto portfolio (holdings across connected exchanges and wallets).\n\n" +
-			"This is account-private data. Wallet addresses are hidden by default (use --full to reveal).\n" +
-			"Secrets (API keys, private keys, mnemonics) are ALWAYS masked, even with --full.\n" +
-			"Pass --mask-balances to hide balance figures, or use `--fields symbol` to project to symbols only.",
+			"This is account-private data. By default only known-safe display fields are shown; any\n" +
+			"unrecognized field (and wallet addresses) is masked because the response shape is not pinned.\n" +
+			"Use --full to reveal addresses and unrecognized fields (secrets such as API keys, private keys,\n" +
+			"and mnemonics are ALWAYS masked, even with --full). Pass --mask-balances to hide balance figures,\n" +
+			"or `--fields symbol` to project to symbols only.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client, err := mcpClientFor(cmd)
 			if err != nil {
@@ -46,17 +57,21 @@ func newPortfolioCommand() *cobra.Command {
 				fmt.Fprintln(factory.Stdout, "No connected exchanges or wallets. Connect an exchange in the altFINS web app to see your holdings.")
 				return nil
 			}
-			// In the default table view (no explicit --fields), hide wallet-address
-			// fields entirely unless --full; JSON/JSONL keep them masked.
-			if tableMode && len(factory.Options.Fields) == 0 && !full {
-				value = dropAddressKeys(value)
+			// Default table view (no explicit --fields): project to the curated
+			// columns; address columns only appear with --full.
+			if tableMode && len(factory.Options.Fields) == 0 {
+				cols := portfolioDefaultColumns
+				if full {
+					cols = append(append([]string(nil), cols...), "address", "walletAddress", "account")
+				}
+				value = applyDefaultColumns(value, factory.Options.Output, nil, cols)
 			}
 			return handleResult(cmd, value, nil)
 		},
 	}
 	markMCPQuery(showCmd, "getUserPortfolio")
 	showCmd.Flags().BoolVar(&maskBalances, "mask-balances", false, "Mask balance figures in the output")
-	showCmd.Flags().BoolVar(&full, "full", false, "Reveal wallet addresses (hidden by default; secrets stay masked)")
+	showCmd.Flags().BoolVar(&full, "full", false, "Reveal wallet addresses and unrecognized fields (secrets stay masked)")
 
 	cmd.AddCommand(showCmd)
 	return cmd
@@ -86,21 +101,21 @@ func isEmptyResult(value any) bool {
 	}
 }
 
-// redactPortfolio walks a decoded portfolio payload and masks sensitive fields by
-// key name. Secrets (API keys, private keys, mnemonics, passwords) are ALWAYS
-// masked, even with --full. Wallet-address-like fields are masked unless --full.
-// Balance-like fields are masked only when --mask-balances is set. The response
-// schema is not pinned (real-PII, not sampled), so redaction is key-name heuristic.
+// redactPortfolio walks a decoded portfolio payload and masks sensitive fields.
+// Because the response schema is not pinned (real-PII, not sampled), it uses a
+// default-deny model for scalar STRING leaves: a string is shown only if its key
+// is a known-safe display field or a balance; anything else is masked by default
+// and revealed only with --full. Secrets (API keys, private keys, mnemonics,
+// passwords) are masked unconditionally, even with --full. Wallet addresses are
+// masked unless --full. Numbers and booleans pass through unless their key is
+// secret/address-class.
 func redactPortfolio(value any, full, maskBalances bool) any {
 	switch v := value.(type) {
 	case []map[string]any:
 		out := make([]map[string]any, 0, len(v))
 		for _, item := range v {
-			redacted := redactPortfolio(item, full, maskBalances)
-			if m, ok := redacted.(map[string]any); ok {
+			if m, ok := redactPortfolio(item, full, maskBalances).(map[string]any); ok {
 				out = append(out, m)
-			} else {
-				out = append(out, map[string]any{"value": redacted})
 			}
 		}
 		return out
@@ -108,15 +123,11 @@ func redactPortfolio(value any, full, maskBalances bool) any {
 		out := make(map[string]any, len(v))
 		for key, child := range v {
 			lk := strings.ToLower(key)
-			switch {
-			case isAlwaysSecretKey(lk):
-				out[key] = app.MaskSecret(scalarString(child))
-			case !full && isWalletAddressKey(lk):
-				out[key] = app.MaskSecret(scalarString(child))
-			case maskBalances && isBalanceKey(lk):
-				out[key] = "***"
-			default:
+			switch child.(type) {
+			case map[string]any, []any:
 				out[key] = redactPortfolio(child, full, maskBalances)
+			default:
+				out[key] = redactScalar(lk, child, full, maskBalances)
 			}
 		}
 		return out
@@ -131,36 +142,30 @@ func redactPortfolio(value any, full, maskBalances bool) any {
 	}
 }
 
-// dropAddressKeys removes wallet-address-like fields outright (rather than masking
-// them). Used for the default table view so addresses are hidden, not shown masked.
-func dropAddressKeys(value any) any {
-	switch v := value.(type) {
-	case []map[string]any:
-		out := make([]map[string]any, 0, len(v))
-		for _, item := range v {
-			if m, ok := dropAddressKeys(item).(map[string]any); ok {
-				out = append(out, m)
-			}
+// redactScalar applies the masking policy to a single scalar (string/number/bool).
+func redactScalar(lowerKey string, child any, full, maskBalances bool) any {
+	switch {
+	case isAlwaysSecretKey(lowerKey):
+		return app.MaskSecret(scalarString(child))
+	case isWalletAddressKey(lowerKey):
+		if full {
+			return child
 		}
-		return out
-	case map[string]any:
-		out := make(map[string]any, len(v))
-		for key, child := range v {
-			if isWalletAddressKey(strings.ToLower(key)) {
-				continue
-			}
-			out[key] = dropAddressKeys(child)
+		return app.MaskSecret(scalarString(child))
+	case isBalanceKey(lowerKey):
+		if maskBalances {
+			return "***"
 		}
-		return out
-	case []any:
-		out := make([]any, len(v))
-		for i, child := range v {
-			out[i] = dropAddressKeys(child)
-		}
-		return out
-	default:
-		return value
+		return child
 	}
+	// Unknown leaf: numbers/bools pass through; strings are default-deny.
+	if s, ok := child.(string); ok {
+		if isPortfolioSafeLeafKey(lowerKey) || full {
+			return child
+		}
+		return app.MaskSecret(s)
+	}
+	return child
 }
 
 // isAlwaysSecretKey matches credential-bearing fields that must never be shown,
@@ -181,16 +186,12 @@ func isAlwaysSecretKey(lowerKey string) bool {
 // isWalletAddressKey matches wallet-address-like fields, masked by default and
 // revealed by --full. Errs toward over-redaction (a privacy control).
 func isWalletAddressKey(lowerKey string) bool {
-	for _, needle := range []string{"address", "addr", "accountid", "pubkey", "publickey", "iban"} {
+	for _, needle := range []string{"address", "addr", "account", "pubkey", "publickey", "iban", "hash"} {
 		if strings.Contains(lowerKey, needle) {
 			return true
 		}
 	}
-	switch lowerKey {
-	case "wallet", "account", "hash":
-		return true
-	}
-	return false
+	return lowerKey == "wallet"
 }
 
 func isBalanceKey(lowerKey string) bool {
@@ -200,6 +201,22 @@ func isBalanceKey(lowerKey string) bool {
 		}
 	}
 	return lowerKey == "qty"
+}
+
+// isPortfolioSafeLeafKey is the allowlist of clearly-non-PII string fields shown
+// by default. Anything not on it (and not a balance/known class) is masked by
+// default for the unverified-shape PII command.
+func isPortfolioSafeLeafKey(lowerKey string) bool {
+	for _, needle := range []string{"symbol", "ticker", "asset", "currency", "exchange", "network", "chain", "market", "price", "change", "percent", "volume", "marketcap"} {
+		if strings.Contains(lowerKey, needle) {
+			return true
+		}
+	}
+	switch lowerKey {
+	case "name", "coinname", "id", "coinid", "type", "status", "rank", "cap", "source":
+		return true
+	}
+	return false
 }
 
 func scalarString(value any) string {
