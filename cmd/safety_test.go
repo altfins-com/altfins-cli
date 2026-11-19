@@ -33,6 +33,7 @@ func isolatedConfig(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
 	t.Setenv("XDG_CONFIG_HOME", dir)
+	t.Setenv("APPDATA", dir)
 	t.Setenv("ALTFINS_API_KEY", "")
 	t.Setenv("ALTFINS_BASE_URL", "")
 }
