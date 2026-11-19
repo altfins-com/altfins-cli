@@ -799,8 +799,8 @@ func (m browserModel) statusLine() string {
 	}
 	if m.quotaErr != nil {
 		parts = append(parts, "quota unavailable")
-	} else {
-		parts = append(parts, fmt.Sprintf("permits %d/%d", m.quota.AvailablePermits, m.quota.MonthlyAvailablePermits))
+	} else if m.quota.AvailablePermits != nil && m.quota.MonthlyAvailablePermits != nil {
+		parts = append(parts, fmt.Sprintf("permits %d/%d", *m.quota.AvailablePermits, *m.quota.MonthlyAvailablePermits))
 	}
 	if m.chartConfig.Enabled {
 		preset := m.activeChartPreset()

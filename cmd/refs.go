@@ -1,6 +1,9 @@
 package cmd
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/altfins-com/altfins-cli/internal/altfins"
+	"github.com/spf13/cobra"
+)
 
 func newRefsCommand() *cobra.Command {
 	cmd := &cobra.Command{
@@ -8,6 +11,7 @@ func newRefsCommand() *cobra.Command {
 		Short: "Reference data and enums",
 	}
 
+	var class, search string
 	symbolsCmd := &cobra.Command{
 		Use:   "symbols",
 		Short: "List supported altFINS symbols",
@@ -16,10 +20,18 @@ func newRefsCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if _, err := altfins.FilterSymbols(nil, class, search); err != nil {
+				return err
+			}
 			data, err := client.Symbols(cmd.Context())
+			if err == nil {
+				data, err = altfins.FilterSymbols(data, class, search)
+			}
 			return handleResult(cmd, data, err)
 		},
 	}
+	symbolsCmd.Flags().StringVar(&search, "search", "", "Match an identifier or instrument name")
+	symbolsCmd.Flags().StringVar(&class, "asset-class", "", "Limit to stock or forex identifiers")
 	markRemoteQuery(symbolsCmd, "GET", "/api/v2/public/symbols")
 
 	intervalsCmd := &cobra.Command{

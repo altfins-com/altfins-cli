@@ -1,51 +1,68 @@
 package openapi
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
+	"strings"
 	"testing"
+
+	"github.com/altfins-com/altfins-cli/cmd"
 )
 
-// Note: `af calendar` and `af portfolio` are intentionally absent from this REST
-// contract. They are backed by the altFINS MCP server (JSON-RPC tools/call), not
-// the public REST API, so they have no path in altfins-openapi.json by design.
-func TestOpenAPISnapshotContainsRequiredPaths(t *testing.T) {
-	data, err := os.ReadFile("altfins-openapi.json")
+// Compare the command discovery payload with every public v2 REST operation.
+func TestPublicRESTCoverage(t *testing.T) {
+	var spec struct {
+		Paths map[string]map[string]json.RawMessage
+	}
+	b, err := os.ReadFile("altfins-openapi.json")
 	if err != nil {
-		t.Fatalf("read openapi snapshot: %v", err)
+		t.Fatal(err)
 	}
-
-	var doc struct {
-		Paths      map[string]json.RawMessage `json:"paths"`
-		Components struct {
-			Schemas map[string]struct {
-				Properties map[string]json.RawMessage `json:"properties"`
-			} `json:"schemas"`
-		} `json:"components"`
+	if err = json.Unmarshal(b, &spec); err != nil {
+		t.Fatal(err)
 	}
-	if err := json.Unmarshal(data, &doc); err != nil {
-		t.Fatalf("decode openapi snapshot: %v", err)
-	}
-
-	required := []string{
-		"/api/v2/public/symbols",
-		"/api/v2/public/available-permits",
-		"/api/v2/public/screener-data/search-requests",
-		"/api/v2/public/technical-analysis/data",
-		"/api/v2/public/signals-feed/search-requests",
-		"/api/v2/public/news-summary/search-requests",
-	}
-	for _, path := range required {
-		if _, ok := doc.Paths[path]; !ok {
-			t.Fatalf("missing required path %q", path)
+	want := map[string]bool{}
+	for path, ops := range spec.Paths {
+		if strings.HasPrefix(path, "/api/v2/public/") {
+			for method := range ops {
+				want[strings.ToUpper(method)+" "+path] = true
+			}
 		}
 	}
-
-	signalFeed, ok := doc.Components.Schemas["ApiSignalFeed"]
-	if !ok {
-		t.Fatal("missing ApiSignalFeed schema")
+	if len(want) != 21 {
+		t.Fatalf("snapshot has %d v2 operations", len(want))
 	}
-	if _, ok := signalFeed.Properties["bullish"]; !ok {
-		t.Fatal("ApiSignalFeed schema must expose bullish response field")
+	cli := cmd.NewRootCommand()
+	var out bytes.Buffer
+	cli.SetOut(&out)
+	cli.SetArgs([]string{"commands", "-o", "json"})
+	if err := cli.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	type node struct {
+		Endpoint struct{ Method, Path string }
+		Children []node
+	}
+	var root node
+	if err := json.Unmarshal(out.Bytes(), &root); err != nil {
+		t.Fatal(err)
+	}
+	var walk func(node)
+	walk = func(n node) {
+		if e := n.Endpoint; e.Method == "GET" || e.Method == "POST" {
+			key := e.Method + " " + e.Path
+			if !want[key] {
+				t.Errorf("unexpected operation %s", key)
+			}
+			delete(want, key)
+		}
+		for _, child := range n.Children {
+			walk(child)
+		}
+	}
+	walk(root)
+	if len(want) > 0 {
+		t.Errorf("missing CLI commands for %v", want)
 	}
 }

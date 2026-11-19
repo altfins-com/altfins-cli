@@ -1,16 +1,15 @@
 # Winget Packaging
 
-`af` is prepared for Windows Package Manager publication through `winget`.
+`af` is published under the package ID `altfins.af` in `winget`.
 
-## Intended Install Command
+## Install
 
-Once the package is merged into the public `winget` source, the install flow will be:
+Install from the public catalogue.
 
 ```powershell
 winget install --id altfins.af -e --source winget
 ```
 
-Until that publication is live, Windows users should continue using the GitHub Releases `.zip` artifacts documented in the main README.
 
 ## Package Identity
 
@@ -52,7 +51,7 @@ With that flag enabled, GoReleaser will:
 
 - generate the `winget` manifests from the Windows release assets
 - push them to `<WINGET_OWNER>/winget-pkgs`
-- open a draft PR into `microsoft/winget-pkgs:master`
+- open a PR into `microsoft/winget-pkgs:master`
 
 ## First-Time Setup
 
@@ -66,8 +65,4 @@ If you want the fork under an organization instead of your user account, create 
 
 ## Verification
 
-Before documenting `winget` in the public README as a primary Windows path, verify:
-
-1. The PR to `microsoft/winget-pkgs` is accepted and merged.
-2. `winget install --id altfins.af -e --source winget` works on a clean Windows machine.
-3. `af auth set` and `af auth status` work from a normal PowerShell session.
+Verify that Microsoft accepted the version manifest and that both architecture hashes match the release archives. Catalogue availability follows Microsoft review.

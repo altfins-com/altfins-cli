@@ -69,9 +69,10 @@ func normalizeNewlines(value string) string {
 
 func TestWriteOutputJSONFieldsProjectsPermitsInfo(t *testing.T) {
 	var buf bytes.Buffer
+	minute, monthly := int64(12), int64(99)
 	data := altfins.PermitsInfo{
-		AvailablePermits:        12,
-		MonthlyAvailablePermits: 99,
+		AvailablePermits:        &minute,
+		MonthlyAvailablePermits: &monthly,
 	}
 
 	if err := WriteOutput(&buf, data, "json", []string{"availablePermits"}); err != nil {

@@ -19,7 +19,7 @@ const (
 	OpRemoteQuery OperationType = "remote_query"
 	// OpLocalWrite mutates local state such as the stored config / API key.
 	OpLocalWrite OperationType = "local_write"
-	// OpRemoteWrite mutates remote state via the API. No such command exists yet; reserved for future use.
+	// OpRemoteWrite mutates remote state via the API.
 	OpRemoteWrite OperationType = "remote_write"
 	// OpInteractive launches a long-running interactive UI (TUI). It cannot be --dry-run.
 	OpInteractive OperationType = "interactive"

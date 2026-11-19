@@ -1,6 +1,6 @@
 # altFINS CLI
 
-Terminal-native crypto market intelligence for traders, analysts, and AI agents.
+Terminal-native crypto, stock and forex market intelligence for traders, analysts, and AI agents.
 
 `af` gives you fast access to altFINS market data, analytics, signals, news, and a full-screen TUI without asking you to install a language toolchain or wire up your own API client.
 
@@ -25,7 +25,7 @@ Terminal-native crypto market intelligence for traders, analysts, and AI agents.
 
 ## Install
 
-Pick the setup that matches your machine. Homebrew is the recommended path on macOS and Linux. On Windows, the simplest path is the native `.zip` release, with WSL + Homebrew as an optional setup for users who already work inside Linux terminals.
+Pick the setup that matches your machine. Homebrew is the recommended path on macOS and Linux. Windows users can install with WinGet or download the release ZIP.
 
 ### macOS
 
@@ -84,7 +84,13 @@ If `~/.local/bin` is not in your `PATH`, add it or move `af` into a directory th
 
 ### Windows
 
-For most Windows users, the easiest path is the native `.zip` release from [GitHub Releases](https://github.com/altfins-com/altfins-cli/releases).
+Install with Windows Package Manager.
+
+```powershell
+winget install --id altfins.af -e --source winget
+```
+
+Standalone Windows archives are available from [GitHub Releases](https://github.com/altfins-com/altfins-cli/releases).
 
 Choose:
 
@@ -490,7 +496,7 @@ af commands -o json
 - `read` — local read only (e.g. `af auth status`, `af commands`).
 - `remote_query` — reads from the altFINS API; mutates nothing; safe to `--dry-run`.
 - `local_write` — changes local config (e.g. `af auth set`, `af auth clear`).
-- `remote_write` — changes remote state through the API (reserved; no such command today).
+- `remote_write` — changes remote state through the API (`af setups generate --yes` consumes one monthly AI prompt).
 - `interactive` — long-running TUI; cannot be `--dry-run`.
 
 ### Dry-run for local writes
@@ -546,7 +552,7 @@ af analytics history --symbol BTC --type RSI14 --interval DAILY --from 2026-03-0
 af news list --from 2026-03-01 --page 0 --size 50
 ```
 
-`af markets search` also exposes direct flags for current simple screener filters: `--coin-type`, `--categories`, `--trading-types`, `--exchanges`, `--ath-before`, `--ath-after`, `--support-resistance`, `--support-resistance-lookback`, `--week-52`, `--rsi-divergence`, `--new-low`, `--new-high`, `--macd`, `--macd-histogram`, and `--min-market-cap`.
+`af markets search` also exposes direct flags for current simple screener filters: `--coin-type`, `--categories`, `--trading-type`, `--exchange`, `--percent-down-from-ath`, `--ath-before`, `--ath-after`, `--support-resistance`, `--support-resistance-lookback`, `--week-52`, `--rsi-divergence`, `--new-low`, `--new-high`, `--macd`, `--macd-histogram`, and `--min-market-cap`.
 
 For advanced screener searches, send the raw JSON request body with `--filter` or `--stdin-json`:
 
@@ -1081,3 +1087,25 @@ BOLLINGER_BAND_LOWER, BOLLINGER_BAND_UPPER
 ## Contributing
 
 The main README is intentionally focused on installation and usage. Source builds, tests, and release workflow live in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Stocks, forex and crypto
+
+Search the catalogue by name and retain the returned ID. Apple common stock (`CS_AAPL`), tokenized Apple (`AAPLX`) and the EUR/USD pair (`FX_EURUSD`) are distinct instruments.
+
+```sh
+af refs symbols --search Apple
+af refs symbols --asset-class forex --search EUR/USD
+af markets search --asset-class stock --display-type RSI14 --sort RSI14,desc --size 10
+af analytics history --symbol FX_EURUSD --type RSI14 --interval DAILY --sort time,desc -o csv
+af markets preset --preset SR_RESISTANCE_BREAKOUT --size 10
+af patterns list --symbol BTC --filter '{"relevant":false}' --size 1
+af setups list --created-by ALTFINS --size 1
+af setups report --id 23 -o json
+af setups generate --symbol SOL --interval DAILY --dry-run
+```
+
+A stock or forex scan resolves the full catalogue selection before the server sorts and pages it. Credits depend on the number of selected symbols. Use explicit IDs for a smaller scan. A preset has its own universe. Supply one exchange and one trading type per request. The plural flag spellings still accept a single value.
+
+Signal timestamps record detection. Last price, price change and market cap reflect retrieval time. Some plans delay signals by 24 hours. Check the last bar time across exchange sessions and the FX trading week. FX volume can be zero and does not support liquidity comparisons. A missing snapshot or curated analysis leaves that instrument without coverage for that source.
+
+Stored setup search defaults to the latest matching UTC day. Report reads cost one API credit. Generation requires `--yes` and consumes one monthly AI prompt even for reused results. If generation is pending, use the returned ID with `af setups report --id ID`. After a timeout, use `af setups list --created-by ME --generated-via REST` to check existing requests before considering another generation.

@@ -18,11 +18,6 @@ var calendarCategories = []string{
 	"WHITEPAPER_UPDATE", "DEV_UPDATE",
 }
 
-var calendarMyData = []string{
-	"PORTFOLIO_SYMBOLS", "OPEN_ORDERS_IDENTIFIERS", "OPEN_ORDERS_SYMBOLS",
-	"WATCHLIST_IDENTIFIERS", "WATCHLIST_SYMBOLS_LEVEL_1",
-}
-
 var calendarSortFields = []string{"dateEvent", "createdDate"}
 var calendarSortDirections = []string{"ASC", "DESC"}
 
@@ -42,7 +37,7 @@ var calendarDefaultColumns = []string{
 var calendarAllowedKeys = map[string]struct{}{
 	"quickSearch": {}, "releaseFrom": {}, "releaseTo": {}, "eventFrom": {}, "eventTo": {},
 	"titleKeyword": {}, "assetSymbols": {}, "voteIsHot": {}, "voteIsTrending": {},
-	"voteIsSignificant": {}, "category": {}, "descriptionKeyword": {}, "myData": {},
+	"voteIsSignificant": {}, "category": {}, "descriptionKeyword": {},
 	"page": {}, "size": {}, "sortField": {}, "sortDirection": {},
 }
 
@@ -55,10 +50,10 @@ func newCalendarCommand() *cobra.Command {
 	var bodyFlags jsonBodyFlags
 	var (
 		quickSearch, releaseFrom, releaseTo, eventFrom, eventTo string
-		titleKeyword, descriptionKeyword, symbols, category    string
-		myData, sortField, sortDirection                       string
-		hot, trending, significant                             bool
-		page, size                                             int
+		titleKeyword, descriptionKeyword, symbols, category     string
+		sortField, sortDirection                                string
+		hot, trending, significant                              bool
+		page, size                                              int
 	)
 
 	listCmd := &cobra.Command{
@@ -69,6 +64,9 @@ func newCalendarCommand() *cobra.Command {
 			"'this week', 'this month'); they are passed to the server verbatim. Use --event-from/--event-to\n" +
 			"for when an event happens and --release-from/--release-to for when it was announced.",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if cmd.Flags().Changed("my-data") {
+				return fmt.Errorf("calendar --my-data is no longer supported; use --symbols")
+			}
 			client, err := mcpClientFor(cmd)
 			if err != nil {
 				return err
@@ -99,7 +97,7 @@ func newCalendarCommand() *cobra.Command {
 			setStr("descriptionKeyword", descriptionKeyword)
 			setStr("assetSymbols", symbols)
 			setStr("category", category)
-			setStr("myData", myData)
+
 			setStr("sortField", sortField)
 			setStr("sortDirection", sortDirection)
 			if hot {
@@ -152,7 +150,8 @@ func newCalendarCommand() *cobra.Command {
 	listCmd.Flags().StringVar(&descriptionKeyword, "description-keyword", "", "Match a keyword in the event description")
 	listCmd.Flags().StringVar(&symbols, "symbols", "", "Comma-separated asset symbols (e.g. BTC,ETH)")
 	listCmd.Flags().StringVar(&category, "category", "", "Comma-separated categories (see `af calendar categories`)")
-	listCmd.Flags().StringVar(&myData, "my-data", "", "Account-scoped filter; comma-separated (e.g. PORTFOLIO_SYMBOLS). Privacy-sensitive, opt-in.")
+	listCmd.Flags().String("my-data", "", "Removed calendar filter")
+	_ = listCmd.Flags().MarkHidden("my-data")
 	listCmd.Flags().BoolVar(&hot, "hot", false, "Only events voted hot")
 	listCmd.Flags().BoolVar(&trending, "trending", false, "Only events voted trending")
 	listCmd.Flags().BoolVar(&significant, "significant", false, "Only events voted significant")
@@ -189,12 +188,12 @@ func validateEnum(flag string, values, allowed []string) error {
 
 // normalizeAndValidateCalendarArgs validates enum values and string typing for the
 // calendar args regardless of whether they came from a first-class flag or raw
-// --filter JSON. It upper-cases category/myData/sortDirection (sortField stays
+// --filter JSON. It upper-cases category/sortDirection (sortField stays
 // exact-case) so the raw escape hatch gets the same validation the flags do.
 func normalizeAndValidateCalendarArgs(args map[string]any) error {
 	stringParams := []string{
 		"quickSearch", "releaseFrom", "releaseTo", "eventFrom", "eventTo",
-		"titleKeyword", "descriptionKeyword", "assetSymbols", "category", "myData",
+		"titleKeyword", "descriptionKeyword", "assetSymbols", "category",
 		"sortField", "sortDirection",
 	}
 	for _, key := range stringParams {
@@ -210,13 +209,6 @@ func normalizeAndValidateCalendarArgs(args map[string]any) error {
 			return err
 		}
 		args["category"] = strings.Join(vals, ",")
-	}
-	if v, _ := args["myData"].(string); v != "" {
-		vals := csvValues(strings.ToUpper(v))
-		if err := validateEnum("my-data", vals, calendarMyData); err != nil {
-			return err
-		}
-		args["myData"] = strings.Join(vals, ",")
 	}
 	if v, _ := args["sortField"].(string); v != "" {
 		if err := validateEnum("sort-field", []string{v}, calendarSortFields); err != nil {

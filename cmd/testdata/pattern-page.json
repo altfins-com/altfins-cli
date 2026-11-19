@@ -1,0 +1,59 @@
+{
+  "size": 1,
+  "number": 0,
+  "sort": [
+    {
+      "direction": "ASC",
+      "property": "age",
+      "ignoreCase": false,
+      "nullHandling": "NATIVE"
+    },
+    {
+      "direction": "ASC",
+      "property": "priority",
+      "ignoreCase": false,
+      "nullHandling": "NATIVE"
+    },
+    {
+      "direction": "DESC",
+      "property": "identifiedTimestamp",
+      "ignoreCase": false,
+      "nullHandling": "NATIVE"
+    }
+  ],
+  "content": [
+    {
+      "symbol": "BTC",
+      "name": "Bitcoin",
+      "timeInterval": "DAILY",
+      "relevant": false,
+      "patternType": "CHART_PATTERNS",
+      "patternSubType": "CHANNEL_DOWN",
+      "patternResultType": "EMERGING",
+      "patternDirection": "BUY",
+      "identifiedTime": "Oct 28, 2026, 12:00:00 AM",
+      "patternStopTime": "Oct 27, 2026, 12:00:00 AM",
+      "predictionToTime": "Nov 7, 2026, 12:00:00 AM",
+      "patternIrrelevantTime": "-",
+      "patternCreationTime": "Oct 29, 2026, 10:21:30 PM",
+      "expiresAt": "Nov 3, 2026, 7:29:45 AM",
+      "analysisText": "Channel Down identified at 10/28 00:00. This pattern is still in the process of forming. Possible bullish price movement towards the resistance 83,387.7 within the next 2 hours.",
+      "successRate": "73.00",
+      "quality": "0.64693618",
+      "age": 6,
+      "lastPrice": "63802.528198700136272237",
+      "priceChange": "0.01171997",
+      "priority": "600.00",
+      "initialProfitPotential": "0.09053043",
+      "signalEntryLevel": "81,280.90",
+      "stopLoss": "79,216.80",
+      "targetLevel": "83,387.70",
+      "targetPeriod": "1 day"
+    }
+  ],
+  "totalElements": 1,
+  "numberOfElements": 1,
+  "totalPages": 1,
+  "first": true,
+  "last": true
+}

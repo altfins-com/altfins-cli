@@ -34,11 +34,11 @@ func newMarketsCommand() *cobra.Command {
 	var coinType string
 	var categories string
 	var tradingTypes string
-	var exchanges string
+	var exchanges, assetClass, percentATH string
 	var athBefore string
 	var athAfter string
 	var supportResistance string
-	var supportResistanceLookback string
+	var supportResistanceLookback int
 	var week52 string
 	var rsiDivergence string
 	var newLow string
@@ -59,7 +59,7 @@ func newMarketsCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if items := csvValues(symbols); len(items) > 0 {
+			if items := csvValues(symbols); cmd.Flags().Changed("symbols") {
 				filter["symbols"] = items
 			}
 			if interval != "" {
@@ -74,11 +74,14 @@ func newMarketsCommand() *cobra.Command {
 			if items := csvValues(categories); len(items) > 0 {
 				filter["coinCategoryFilter"] = items
 			}
-			if items := csvValues(tradingTypes); len(items) > 0 {
-				filter["tradingTypeFilter"] = items
+			if tradingTypes != "" {
+				filter["tradingTypeFilter"] = tradingTypes
 			}
-			if items := csvValues(exchanges); len(items) > 0 {
-				filter["exchangeFilter"] = items
+			if exchanges != "" {
+				filter["exchangeFilter"] = exchanges
+			}
+			if percentATH != "" {
+				filter["percentDownFromAthFilter"] = percentATH
 			}
 			if normalized, err := app.NormalizeTimeInput(athBefore, true); err != nil {
 				return err
@@ -93,7 +96,7 @@ func newMarketsCommand() *cobra.Command {
 			if supportResistance != "" {
 				filter["supportResistanceFilter"] = supportResistance
 			}
-			if supportResistanceLookback != "" {
+			if cmd.Flags().Changed("support-resistance-lookback") {
 				filter["supportResistanceLookBackIntervals"] = supportResistanceLookback
 			}
 			if week52 != "" {
@@ -117,6 +120,10 @@ func newMarketsCommand() *cobra.Command {
 			if cmd.Flags().Changed("min-market-cap") {
 				filter["minimumMarketCapValue"] = minMarketCap
 			}
+			if assetClass != "" {
+				data, err := client.MarketsByClass(cmd.Context(), paging.value(), filter, assetClass)
+				return handleResult(cmd, data, err)
+			}
 			data, err := client.MarketsSearch(cmd.Context(), paging.value(), filter)
 			return handleResult(cmd, data, err)
 		},
@@ -124,17 +131,21 @@ func newMarketsCommand() *cobra.Command {
 	markRemoteQuery(searchCmd, "POST", "/api/v2/public/screener-data/search-requests")
 	paging.bind(searchCmd)
 	bodyFlags.bind(searchCmd)
+	searchCmd.Flags().StringVar(&assetClass, "asset-class", "", "Rank the entire stock or forex catalogue (credits depend on symbol count)")
+	searchCmd.Flags().StringVar(&percentATH, "percent-down-from-ath", "", "Percent-down-from-ATH filter enum")
+	searchCmd.Flags().StringVar(&tradingTypes, "trading-type", "", "Single trading type")
+	searchCmd.Flags().StringVar(&exchanges, "exchange", "", "Single exchange")
 	searchCmd.Flags().StringVar(&symbols, "symbols", "", "Comma-separated symbols")
 	searchCmd.Flags().StringVar(&interval, "interval", "", "Time interval, e.g. DAILY or HOURLY")
 	searchCmd.Flags().StringVar(&displayType, "display-type", "", "Comma-separated screener display fields")
 	searchCmd.Flags().StringVar(&coinType, "coin-type", "", "Coin type filter, e.g. REGULAR")
 	searchCmd.Flags().StringVar(&categories, "categories", "", "Comma-separated coin category filters")
-	searchCmd.Flags().StringVar(&tradingTypes, "trading-types", "", "Comma-separated trading type filters")
-	searchCmd.Flags().StringVar(&exchanges, "exchanges", "", "Comma-separated exchange filters")
+	searchCmd.Flags().StringVar(&tradingTypes, "trading-types", "", "Single trading type (legacy spelling)")
+	searchCmd.Flags().StringVar(&exchanges, "exchanges", "", "Single exchange (legacy spelling)")
 	searchCmd.Flags().StringVar(&athBefore, "ath-before", "", "ATH date on or before this date/datetime")
 	searchCmd.Flags().StringVar(&athAfter, "ath-after", "", "ATH date on or after this date/datetime")
 	searchCmd.Flags().StringVar(&supportResistance, "support-resistance", "", "Support/resistance filter")
-	searchCmd.Flags().StringVar(&supportResistanceLookback, "support-resistance-lookback", "", "Support/resistance lookback intervals: 1-5")
+	searchCmd.Flags().IntVar(&supportResistanceLookback, "support-resistance-lookback", 5, "Support/resistance lookback intervals: 1-5")
 	searchCmd.Flags().StringVar(&week52, "week-52", "", "52-week analytics filter")
 	searchCmd.Flags().StringVar(&rsiDivergence, "rsi-divergence", "", "RSI divergence filter")
 	searchCmd.Flags().StringVar(&newLow, "new-low", "", "New low period filter, e.g. PERIODS_30")
@@ -143,6 +154,8 @@ func newMarketsCommand() *cobra.Command {
 	searchCmd.Flags().StringVar(&macdHistogram, "macd-histogram", "", "MACD histogram filter")
 	searchCmd.Flags().Float64Var(&minMarketCap, "min-market-cap", 0, "Minimum market cap value")
 
-	cmd.AddCommand(fieldsCmd, searchCmd)
+	searchCmd.MarkFlagsMutuallyExclusive("exchange", "exchanges")
+	searchCmd.MarkFlagsMutuallyExclusive("trading-type", "trading-types")
+	cmd.AddCommand(fieldsCmd, searchCmd, newPresetCommand())
 	return cmd
 }

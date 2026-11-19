@@ -85,7 +85,7 @@ func NewRootCommand() *cobra.Command {
 		newAuthCommand(),
 		newRefsCommand(),
 		newQuotaCommand(),
-		newMarketsCommand(),
+		newMarketsCommand(), newPatternsCommand(), newSetupsCommand(),
 		newOHLCVCommand(),
 		newAnalyticsCommand(),
 		newTACommand(),

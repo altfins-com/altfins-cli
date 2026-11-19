@@ -31,7 +31,7 @@ type jsonBodyFlags struct {
 func (f *pagingFlags) bind(cmd *cobra.Command) {
 	cmd.Flags().IntVar(&f.page, "page", 0, "Zero-based page index")
 	cmd.Flags().IntVar(&f.size, "size", 0, "Page size")
-	cmd.Flags().StringSliceVar(&f.sort, "sort", nil, "Sort expressions (repeatable)")
+	cmd.Flags().StringArrayVar(&f.sort, "sort", nil, "Sort expressions (repeatable)")
 }
 
 func (f *pagingFlags) value() altfins.Paging {
@@ -48,7 +48,11 @@ func (f *jsonBodyFlags) bind(cmd *cobra.Command) {
 }
 
 func loadBodyFlags(cmd *cobra.Command, flags jsonBodyFlags) (map[string]any, error) {
-	return app.LoadJSONObject(flags.filter, flags.stdinJSON, cmd.InOrStdin())
+	body, err := app.LoadJSONObject(flags.filter, flags.stdinJSON, cmd.InOrStdin())
+	if err == nil && body == nil {
+		return nil, fmt.Errorf("expected a JSON object")
+	}
+	return body, err
 }
 
 func csvValues(value string) []string {

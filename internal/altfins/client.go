@@ -71,8 +71,24 @@ func NewClient(cfg ClientConfig) *Client {
 		apiKey:     strings.TrimSpace(cfg.APIKey),
 		authSource: strings.TrimSpace(cfg.AuthSource),
 		dryRun:     cfg.DryRun,
-		httpClient: httpClient,
+		httpClient: sameOriginClient(httpClient),
 	}
+}
+
+// Keep API credentials on the initial origin, including on chained redirects.
+func sameOriginClient(client *http.Client) *http.Client {
+	guarded := *client
+	guarded.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		origin := via[0].URL
+		if !strings.EqualFold(req.URL.Host, origin.Host) || req.URL.Scheme != origin.Scheme || len(via) >= 10 {
+			return http.ErrUseLastResponse
+		}
+		if client.CheckRedirect != nil {
+			return client.CheckRedirect(req, via)
+		}
+		return nil
+	}
+	return &guarded
 }
 
 func IsDryRun(err error) (*DryRunError, bool) {
@@ -114,8 +130,24 @@ func (c *Client) AvailablePermits(ctx context.Context) (int64, error) {
 }
 
 func (c *Client) MonthlyAvailablePermits(ctx context.Context) (int64, error) {
-	var out int64
-	return out, c.do(ctx, http.MethodGet, "/api/v2/public/monthly-available-permits", nil, nil, &out)
+	var raw json.RawMessage
+	if err := c.do(ctx, http.MethodGet, "/api/v2/public/monthly-available-permits", nil, nil, &raw); err != nil {
+		return 0, err
+	}
+	var monthly *int64
+	if raw[0] == '{' {
+		var quota PermitsInfo
+		if err := json.Unmarshal(raw, &quota); err != nil {
+			return 0, err
+		}
+		monthly = quota.MonthlyAvailablePermits
+	} else if err := json.Unmarshal(raw, &monthly); err != nil {
+		return 0, err
+	}
+	if monthly == nil {
+		return 0, fmt.Errorf("monthlyAvailablePermits missing in quota response")
+	}
+	return *monthly, nil
 }
 
 func (c *Client) AllAvailablePermits(ctx context.Context) (PermitsInfo, error) {
@@ -138,8 +170,25 @@ func (c *Client) AnalyticsTypes(ctx context.Context) ([]AnalyticsType, error) {
 	return out, c.do(ctx, http.MethodGet, "/api/v2/public/analytics/types", nil, nil, &out)
 }
 
-func (c *Client) MarketsSearch(ctx context.Context, paging Paging, body any) (Page[ScreenerSearchResult], error) {
+func (c *Client) MarketsSearch(ctx context.Context, paging Paging, body map[string]any) (Page[ScreenerSearchResult], error) {
 	var out Page[ScreenerSearchResult]
+	if err := normalizeMarketFilter(body); err != nil {
+		return out, err
+	}
+	if ids, ok := body["symbols"]; ok {
+		switch v := ids.(type) {
+		case []string:
+			if len(v) == 0 {
+				return emptyMarketPage(paging), nil
+			}
+		case []any:
+			if len(v) == 0 {
+				return emptyMarketPage(paging), nil
+			}
+		default:
+			return out, fmt.Errorf("symbols must be an array of identifiers")
+		}
+	}
 	q := url.Values{}
 	paging.apply(q)
 	return out, c.do(ctx, http.MethodPost, "/api/v2/public/screener-data/search-requests", q, body, &out)
@@ -178,7 +227,11 @@ func (c *Client) SignalsSearch(ctx context.Context, paging Paging, body any) (Pa
 	var out Page[SignalFeedItem]
 	q := url.Values{}
 	paging.apply(q)
-	return out, c.do(ctx, http.MethodPost, "/api/v2/public/signals-feed/search-requests", q, body, &out)
+	err := c.do(ctx, http.MethodPost, "/api/v2/public/signals-feed/search-requests", q, body, &out)
+	for i := range out.Content {
+		out.Content[i].Direction = out.Content[i].DirectionLabel()
+	}
+	return out, err
 }
 
 func (c *Client) NewsSearch(ctx context.Context, paging Paging, body any) (Page[NewsSummary], error) {
@@ -197,6 +250,10 @@ func (c *Client) NewsGet(ctx context.Context, messageID, sourceID int64) (NewsSu
 }
 
 func (c *Client) do(ctx context.Context, method, path string, query url.Values, body any, out any) error {
+	return c.doRequest(ctx, method, path, query, body, out, c.httpClient, 3)
+}
+
+func (c *Client) doRequest(ctx context.Context, method, path string, query url.Values, body, out any, client *http.Client, attempts int) error {
 	bodyBytes, preview, err := c.prepare(method, path, query, body)
 	if err != nil {
 		return err
@@ -205,7 +262,7 @@ func (c *Client) do(ctx context.Context, method, path string, query url.Values, 
 		return &DryRunError{Preview: preview}
 	}
 
-	for attempt := range 3 {
+	for attempt := range attempts {
 		req, err := http.NewRequestWithContext(ctx, method, preview.URL, bytes.NewReader(bodyBytes))
 		if err != nil {
 			return fmt.Errorf("build request: %w", err)
@@ -218,13 +275,13 @@ func (c *Client) do(ctx context.Context, method, path string, query url.Values, 
 			req.Header.Set("X-Api-Key", c.apiKey)
 		}
 
-		resp, err := c.httpClient.Do(req)
+		resp, err := client.Do(req)
 		if err != nil {
 			return fmt.Errorf("execute request: %w", err)
 		}
 
 		if resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500 {
-			if attempt < 2 {
+			if attempt+1 < attempts {
 				io.Copy(io.Discard, resp.Body)
 				resp.Body.Close()
 				time.Sleep(time.Duration(attempt+1) * 200 * time.Millisecond)
@@ -246,7 +303,9 @@ func (c *Client) do(ctx context.Context, method, path string, query url.Values, 
 			io.Copy(io.Discard, resp.Body)
 			return nil
 		}
-		if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
+		decoder := json.NewDecoder(resp.Body)
+		decoder.UseNumber()
+		if err := decoder.Decode(out); err != nil {
 			return fmt.Errorf("decode response: %w", err)
 		}
 		return nil

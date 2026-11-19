@@ -31,6 +31,9 @@ func newNewsCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if err := validateNewsFilter(filter); err != nil {
+				return err
+			}
 			if normalized, err := app.NormalizeTimeInput(from, false); err != nil {
 				return err
 			} else if normalized != "" {
@@ -74,4 +77,13 @@ func newNewsCommand() *cobra.Command {
 
 	cmd.AddCommand(listCmd, getCmd)
 	return cmd
+}
+
+func validateNewsFilter(body map[string]any) error {
+	for key := range body {
+		if key != "fromDate" && key != "toDate" {
+			return fmt.Errorf("unsupported REST news filter %q; use fromDate or toDate", key)
+		}
+	}
+	return nil
 }

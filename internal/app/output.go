@@ -90,6 +90,8 @@ func writeTable(w io.Writer, data tableData) error {
 
 func toJSONItems(data any) []any {
 	switch value := data.(type) {
+	case altfins.Page[map[string]any]:
+		return toAnySlice(value.Content)
 	case altfins.Page[altfins.ScreenerSearchResult]:
 		return toAnySlice(value.Content)
 	case altfins.Page[altfins.SignalFeedItem]:
@@ -139,9 +141,16 @@ func toTableData(data any, fields []string) (tableData, error) {
 		return projectTable(tableData{Headers: headers, Rows: rows}, fields), nil
 	case []map[string]any:
 		return tabularMaps(value, fields), nil
+	case altfins.Page[map[string]any]:
+		return tabularMaps(value.Content, fields), nil
+	case altfins.Record:
+		return tabularMaps([]map[string]any{value}, fields), nil
 	case []altfins.AssetInfo:
+		if len(fields) == 0 {
+			fields = []string{"name", "friendlyName"}
+		}
 		return projectTable(tableData{
-			Headers: []string{"name", "friendlyName"},
+			Headers: []string{"name", "friendlyName", "platforms"},
 			Rows:    mapAssets(value),
 		}, fields), nil
 	case []string:
@@ -172,8 +181,8 @@ func toTableData(data any, fields []string) (tableData, error) {
 		return tableData{Headers: []string{"value"}, Rows: [][]string{{fmt.Sprintf("%d", value)}}}, nil
 	case altfins.PermitsInfo:
 		return projectTable(tableData{
-			Headers: []string{"availablePermits", "monthlyAvailablePermits"},
-			Rows:    [][]string{{fmt.Sprintf("%d", value.AvailablePermits), fmt.Sprintf("%d", value.MonthlyAvailablePermits)}},
+			Headers: []string{"availablePermits", "monthlyAvailablePermits", "minuteAvailableRateLimitUnits", "monthlyAvailableAiTradeSetupPrompts"},
+			Rows:    [][]string{{counter(value.AvailablePermits), counter(value.MonthlyAvailablePermits), counter(value.MinuteAvailableRateLimitUnits), counter(value.MonthlyAvailableAiTradeSetupPrompts)}},
 		}, fields), nil
 	case altfins.Page[altfins.ScreenerSearchResult]:
 		return tabularScreenerPage(value, fields), nil
@@ -217,16 +226,26 @@ func toTableData(data any, fields []string) (tableData, error) {
 	case altfins.Page[altfins.OHLCVData]:
 		return ohlcvRows(value.Content, fields), nil
 	case altfins.Page[altfins.AnalyticsHistoryData]:
+		headers := []string{"symbol", "time", "value", "nonNumericalValue"}
+		for _, item := range value.Content {
+			if item.SupportResistance != nil {
+				headers = append(headers, "supportResistance")
+				break
+			}
+		}
 		rows := make([][]string, 0, len(value.Content))
 		for _, item := range value.Content {
-			rows = append(rows, []string{
-				item.Symbol,
-				item.Time.Format(time.RFC3339),
-				item.Value,
-				item.NonNumericalValue,
-			})
+			row := []string{item.Symbol, item.Time.Format(time.RFC3339), item.Value, item.NonNumericalValue}
+			if len(headers) > len(row) {
+				levels := ""
+				if item.SupportResistance != nil {
+					levels = stringify(item.SupportResistance)
+				}
+				row = append(row, levels)
+			}
+			rows = append(rows, row)
 		}
-		return projectTable(tableData{Headers: []string{"symbol", "time", "value", "nonNumericalValue"}, Rows: rows}, fields), nil
+		return projectTable(tableData{Headers: headers, Rows: rows}, fields), nil
 	case altfins.Page[altfins.TechnicalAnalysisSummary]:
 		rows := make([][]string, 0, len(value.Content))
 		for _, item := range value.Content {
@@ -251,10 +270,17 @@ func toTableData(data any, fields []string) (tableData, error) {
 	}
 }
 
+func counter(v *int64) string {
+	if v == nil {
+		return ""
+	}
+	return fmt.Sprint(*v)
+}
+
 func mapAssets(items []altfins.AssetInfo) [][]string {
 	rows := make([][]string, 0, len(items))
 	for _, item := range items {
-		rows = append(rows, []string{item.Name, item.FriendlyName})
+		rows = append(rows, []string{item.Name, item.FriendlyName, stringify(item.Platforms)})
 	}
 	return rows
 }
@@ -383,7 +409,7 @@ func projectJSONOutput(data any, fields []string) (any, error) {
 	}
 
 	switch value := data.(type) {
-	case altfins.Page[altfins.ScreenerSearchResult],
+	case altfins.Page[map[string]any], altfins.Page[altfins.ScreenerSearchResult],
 		altfins.Page[altfins.SignalFeedItem],
 		altfins.Page[altfins.NewsSummary],
 		altfins.Page[altfins.OHLCVData],
@@ -436,7 +462,9 @@ func normalizeJSONValue(data any) (any, error) {
 		return nil, fmt.Errorf("normalize json output: %w", err)
 	}
 	var generic any
-	if err := json.Unmarshal(payload, &generic); err != nil {
+	decoder := json.NewDecoder(strings.NewReader(string(payload)))
+	decoder.UseNumber()
+	if err := decoder.Decode(&generic); err != nil {
 		return nil, fmt.Errorf("decode json output: %w", err)
 	}
 	return generic, nil

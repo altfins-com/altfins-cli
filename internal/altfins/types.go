@@ -1,6 +1,9 @@
 package altfins
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 type Paging struct {
 	Page int
@@ -9,8 +12,10 @@ type Paging struct {
 }
 
 type OrderModel struct {
-	Property  string `json:"property,omitempty"`
-	Direction string `json:"direction,omitempty"`
+	Property     string `json:"property,omitempty"`
+	Direction    string `json:"direction,omitempty"`
+	IgnoreCase   *bool  `json:"ignoreCase,omitempty"`
+	NullHandling string `json:"nullHandling,omitempty"`
 }
 
 type Page[T any] struct {
@@ -26,8 +31,9 @@ type Page[T any] struct {
 }
 
 type AssetInfo struct {
-	Name         string `json:"name"`
-	FriendlyName string `json:"friendlyName"`
+	Platforms    map[string]string `json:"platforms,omitzero"`
+	Name         string            `json:"name"`
+	FriendlyName string            `json:"friendlyName"`
 }
 
 type ValueType struct {
@@ -44,14 +50,30 @@ type AnalyticsType struct {
 type SignalLabel struct {
 	NameBullish    string `json:"nameBullish,omitempty"`
 	NameBearish    string `json:"nameBearish,omitempty"`
-	TrendSensitive bool   `json:"trendSensitive,omitempty"`
+	TrendSensitive bool   `json:"trendSensitive"`
 	SignalType     string `json:"signalType,omitempty"`
 	SignalKey      string `json:"signalKey,omitempty"`
 }
 
 type PermitsInfo struct {
-	AvailablePermits        int64 `json:"availablePermits"`
-	MonthlyAvailablePermits int64 `json:"monthlyAvailablePermits"`
+	AvailablePermits                    *int64 `json:"availablePermits,omitempty"`
+	MinuteAvailableRateLimitUnits       *int64 `json:"minuteAvailableRateLimitUnits,omitempty"`
+	MonthlyAvailablePermits             *int64 `json:"monthlyAvailablePermits,omitempty"`
+	MonthlyAvailableAiTradeSetupPrompts *int64 `json:"monthlyAvailableAiTradeSetupPrompts,omitempty"`
+}
+
+func (p *PermitsInfo) UnmarshalJSON(data []byte) error {
+	type wire PermitsInfo
+	var v wire
+	if err := json.Unmarshal(data, &v); err != nil {
+		return err
+	}
+	if v.MinuteAvailableRateLimitUnits == nil {
+		v.MinuteAvailableRateLimitUnits = v.AvailablePermits
+	}
+	v.AvailablePermits = v.MinuteAvailableRateLimitUnits
+	*p = PermitsInfo(v)
+	return nil
 }
 
 type ScreenerSearchResult struct {
@@ -117,11 +139,22 @@ type OHLCVData struct {
 	Volume string    `json:"volume"`
 }
 
+type SupportResistanceLevel struct {
+	Slot  int     `json:"slot"`
+	Price *string `json:"price"`
+	Cross string  `json:"cross"`
+}
+type SupportResistance struct {
+	CandleEnd   time.Time                `json:"candleEnd"`
+	Supports    []SupportResistanceLevel `json:"supports"`
+	Resistances []SupportResistanceLevel `json:"resistances"`
+}
 type AnalyticsHistoryData struct {
-	Symbol            string    `json:"symbol"`
-	Time              time.Time `json:"time"`
-	Value             string    `json:"value,omitempty"`
-	NonNumericalValue string    `json:"nonNumericalValue,omitempty"`
+	SupportResistance *SupportResistance `json:"supportResistance,omitempty"`
+	Symbol            string             `json:"symbol"`
+	Time              time.Time          `json:"time"`
+	Value             string             `json:"value,omitempty"`
+	NonNumericalValue string             `json:"nonNumericalValue,omitempty"`
 }
 
 type TechnicalAnalysisSummary struct {
@@ -138,6 +171,8 @@ type TechnicalAnalysisSummary struct {
 }
 
 type RequestPreview struct {
+	Discovery  *RequestPreview     `json:"discovery,omitempty"`
+	Selection  string              `json:"selection,omitempty"`
 	Method     string              `json:"method"`
 	URL        string              `json:"url"`
 	Query      map[string][]string `json:"query,omitempty"`

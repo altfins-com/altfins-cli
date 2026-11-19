@@ -93,7 +93,7 @@ func collectFlagMeta(cmd *cobra.Command) []flagMeta {
 				Type:      flag.Value.Type(),
 				Usage:     flag.Usage,
 				Default:   flag.DefValue,
-				Required:  false,
+				Required:  len(flag.Annotations[cobra.BashCompOneRequiredFlag]) > 0,
 				Inherited: inherited,
 			})
 		})

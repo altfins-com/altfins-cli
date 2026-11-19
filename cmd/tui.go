@@ -52,6 +52,11 @@ func newTUIBrowserCommand(use, short, path string, constructor func(*tui.Depende
 			if err != nil {
 				return err
 			}
+			if use == "news" {
+				if err := validateNewsFilter(filter); err != nil {
+					return err
+				}
+			}
 			if symbol != "" {
 				filter["symbol"] = symbol
 			}
@@ -71,6 +76,8 @@ func newTUIBrowserCommand(use, short, path string, constructor func(*tui.Depende
 	}
 	markInteractive(cmd, path)
 	filterFlags.bind(cmd)
-	cmd.Flags().StringVar(&symbol, "symbol", "", "Optional symbol seed filter")
+	if use != "news" {
+		cmd.Flags().StringVar(&symbol, "symbol", "", "Optional symbol seed filter")
+	}
 	return cmd
 }

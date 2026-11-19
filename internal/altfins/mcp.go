@@ -99,7 +99,7 @@ func NewMCPClient(cfg MCPClientConfig) *MCPClient {
 		apiKey:     strings.TrimSpace(cfg.APIKey),
 		authSource: strings.TrimSpace(cfg.AuthSource),
 		dryRun:     cfg.DryRun,
-		httpClient: httpClient,
+		httpClient: sameOriginClient(httpClient),
 	}
 }
 

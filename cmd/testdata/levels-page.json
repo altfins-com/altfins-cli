@@ -1,0 +1,58 @@
+{
+  "size": 1,
+  "number": 0,
+  "sort": [
+    {
+      "property": "time",
+      "direction": "DESC"
+    }
+  ],
+  "content": [
+    {
+      "supportResistance": {
+        "candleEnd": "2026-11-19T00:00:00Z",
+        "supports": [
+          {
+            "slot": 1,
+            "price": "325.32999",
+            "cross": "NONE"
+          },
+          {
+            "slot": 2,
+            "price": "345.34",
+            "cross": "NONE"
+          },
+          {
+            "slot": 3,
+            "price": "300",
+            "cross": "NONE"
+          }
+        ],
+        "resistances": [
+          {
+            "slot": 1,
+            "price": null,
+            "cross": "NONE"
+          },
+          {
+            "slot": 2,
+            "price": null,
+            "cross": "NONE"
+          },
+          {
+            "slot": 3,
+            "price": null,
+            "cross": "NONE"
+          }
+        ]
+      },
+      "symbol": "CS_AAPL",
+      "time": "2026-11-18T00:00:00Z"
+    }
+  ],
+  "totalElements": 8,
+  "totalPages": 8,
+  "numberOfElements": 1,
+  "first": true,
+  "last": false
+}
