@@ -1,8 +1,15 @@
 # altFINS CLI
 
-Terminal-native crypto, stock and forex market intelligence for traders, analysts, and AI agents.
+Use `af` to screen crypto, stocks and forex, export price and indicator history, or browse markets in the terminal.
 
-`af` gives you fast access to altFINS market data, analytics, signals, news, and a full-screen TUI without asking you to install a language toolchain or wire up your own API client.
+Find an instrument by name, then use its catalogue ID in a query.
+
+```sh
+af refs symbols --search Apple
+af markets search --symbols BTC,CS_AAPL,FX_EURUSD --display-type RSI14
+```
+
+CLI v1.2.0 also adds screener presets, crypto chart patterns and AI trade setups. [Installation](#install) · [Stock and forex examples](#stocks-forex-and-crypto) · [v1.2.0 release notes](https://github.com/altfins-com/altfins-cli/releases/tag/v1.2.0)
 
 <p align="center">
   <img src="docs/assets/tui-markets.svg" alt="altFINS CLI markets TUI" width="100%" />
@@ -150,6 +157,28 @@ af markets search --symbols BTC,ETH --display-type MARKET_CAP,RSI14
 af signals list --direction BULLISH --from 2026-03-01
 af tui markets
 ```
+
+## Stocks, forex and crypto
+
+Search the catalogue by name and retain the returned ID. Apple common stock (`CS_AAPL`), tokenized Apple (`AAPLX`) and the EUR/USD pair (`FX_EURUSD`) are distinct instruments.
+
+```sh
+af refs symbols --search Apple
+af refs symbols --asset-class forex --search EUR/USD
+af markets search --asset-class stock --display-type RSI14 --sort RSI14,desc --size 10
+af analytics history --symbol FX_EURUSD --type RSI14 --interval DAILY --sort time,desc -o csv
+af markets preset --preset SR_RESISTANCE_BREAKOUT --size 10
+af patterns list --symbol BTC --filter '{"relevant":false}' --size 1
+af setups list --created-by ALTFINS --size 1
+af setups report --id 23 -o json
+af setups generate --symbol SOL --interval DAILY --dry-run
+```
+
+A stock or forex scan resolves the full catalogue selection before the server sorts and pages it. Credits depend on the number of selected symbols. Use explicit IDs for a smaller scan. A preset has its own universe. Supply one exchange and one trading type per request. The plural flag spellings still accept a single value.
+
+Signal timestamps record detection. Last price, price change and market cap reflect retrieval time. Some plans delay signals by 24 hours. Check the last bar time across exchange sessions and the FX trading week. FX volume can be zero and does not support liquidity comparisons. A missing snapshot or curated analysis leaves that instrument without coverage for that source.
+
+Stored setup search defaults to the latest matching UTC day. Report reads cost one API credit. Generation requires `--yes` and consumes one monthly AI prompt even for reused results. If generation is pending, use the returned ID with `af setups report --id ID`. After a timeout, use `af setups list --created-by ME --generated-via REST` to check existing requests before considering another generation.
 
 ## Real CLI Snippets
 
@@ -1087,25 +1116,3 @@ BOLLINGER_BAND_LOWER, BOLLINGER_BAND_UPPER
 ## Contributing
 
 The main README is intentionally focused on installation and usage. Source builds, tests, and release workflow live in [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Stocks, forex and crypto
-
-Search the catalogue by name and retain the returned ID. Apple common stock (`CS_AAPL`), tokenized Apple (`AAPLX`) and the EUR/USD pair (`FX_EURUSD`) are distinct instruments.
-
-```sh
-af refs symbols --search Apple
-af refs symbols --asset-class forex --search EUR/USD
-af markets search --asset-class stock --display-type RSI14 --sort RSI14,desc --size 10
-af analytics history --symbol FX_EURUSD --type RSI14 --interval DAILY --sort time,desc -o csv
-af markets preset --preset SR_RESISTANCE_BREAKOUT --size 10
-af patterns list --symbol BTC --filter '{"relevant":false}' --size 1
-af setups list --created-by ALTFINS --size 1
-af setups report --id 23 -o json
-af setups generate --symbol SOL --interval DAILY --dry-run
-```
-
-A stock or forex scan resolves the full catalogue selection before the server sorts and pages it. Credits depend on the number of selected symbols. Use explicit IDs for a smaller scan. A preset has its own universe. Supply one exchange and one trading type per request. The plural flag spellings still accept a single value.
-
-Signal timestamps record detection. Last price, price change and market cap reflect retrieval time. Some plans delay signals by 24 hours. Check the last bar time across exchange sessions and the FX trading week. FX volume can be zero and does not support liquidity comparisons. A missing snapshot or curated analysis leaves that instrument without coverage for that source.
-
-Stored setup search defaults to the latest matching UTC day. Report reads cost one API credit. Generation requires `--yes` and consumes one monthly AI prompt even for reused results. If generation is pending, use the returned ID with `af setups report --id ID`. After a timeout, use `af setups list --created-by ME --generated-via REST` to check existing requests before considering another generation.
