@@ -190,8 +190,21 @@ func (m *Manager) writeStored(settings Settings) error {
 		return fmt.Errorf("marshal config: %w", err)
 	}
 	data = append(data, '\n')
-	if err := os.WriteFile(m.path, data, 0o600); err != nil {
+	// Replacing the file also repairs permissions on older, broadly readable configs.
+	file, err := os.CreateTemp(filepath.Dir(m.path), ".config-*.tmp")
+	if err != nil {
+		return fmt.Errorf("create config file: %w", err)
+	}
+	defer os.Remove(file.Name())
+	if _, err := file.Write(data); err != nil {
+		file.Close()
 		return fmt.Errorf("write config file: %w", err)
+	}
+	if err := file.Close(); err != nil {
+		return fmt.Errorf("close config file: %w", err)
+	}
+	if err := os.Rename(file.Name(), m.path); err != nil {
+		return fmt.Errorf("replace config file: %w", err)
 	}
 	return nil
 }

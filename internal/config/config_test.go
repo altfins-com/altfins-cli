@@ -68,4 +68,17 @@ func TestSaveAPIKeyUsesStrictPermissions(t *testing.T) {
 	if got, want := info.Mode().Perm(), os.FileMode(0o600); got != want {
 		t.Fatalf("file permissions mismatch: got %v want %v", got, want)
 	}
+	if err := os.Chmod(path, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.SaveAPIKey("replacement-secret"); err != nil {
+		t.Fatal(err)
+	}
+	info, err = os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := info.Mode().Perm(); got != 0o600 {
+		t.Fatalf("replacement config permissions: got %v want 0600", got)
+	}
 }

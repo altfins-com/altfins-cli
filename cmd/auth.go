@@ -57,7 +57,7 @@ func newAuthCommand() *cobra.Command {
 					huh.NewGroup(
 						huh.NewInput().
 							Title("altFINS API Key").
-							Description("Stored locally in ~/.config/af/config.json with 0600 permissions").
+								Description("Saved as plaintext in your user configuration directory.").
 							EchoMode(huh.EchoModePassword).
 							Value(&apiKey),
 					),

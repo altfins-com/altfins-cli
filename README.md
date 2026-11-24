@@ -143,6 +143,8 @@ This installs `af` inside your WSL environment, not as a native Windows `af.exe`
 af auth set
 ```
 
+The interactive prompt hides your input. The CLI stores the key in plaintext in your user configuration directory. On macOS and Linux it writes the file with mode `0600`. For CI or agents, supply `ALTFINS_API_KEY` through your secret manager and skip `af auth set` to keep the key out of the config file. Use `af auth clear` to remove a previously saved key.
+
 2. Verify that auth is configured:
 
 ```bash
