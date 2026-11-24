@@ -9,7 +9,7 @@ af refs symbols --search Apple
 af markets search --symbols BTC,CS_AAPL,FX_EURUSD --display-type RSI14
 ```
 
-CLI v1.2.0 also adds screener presets, crypto chart patterns and AI trade setups. [Installation](#install) · [Stock and forex examples](#stocks-forex-and-crypto) · [v1.2.0 release notes](https://github.com/altfins-com/altfins-cli/releases/tag/v1.2.0)
+CLI v1.2.1 updates dependencies and protects API key files when replacing a saved key on macOS and Linux. [Installation](#install) · [Stock and forex examples](#stocks-forex-and-crypto) · [v1.2.1 release notes](https://github.com/altfins-com/altfins-cli/releases/tag/v1.2.1)
 
 <p align="center">
   <img src="docs/assets/tui-markets.svg" alt="altFINS CLI markets TUI" width="100%" />

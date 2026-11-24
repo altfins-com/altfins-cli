@@ -65,4 +65,6 @@ If you want the fork under an organization instead of your user account, create 
 
 ## Verification
 
+Compare the submitted installer manifest with the current catalogue entry. Both Windows archives contain the same portable command. Keep their shared `NestedInstallerType`, `NestedInstallerFiles` and `UpgradeBehavior` at the manifest root if GoReleaser repeats them under each architecture. Preserve the URL and SHA-256 for each archive.
+
 Verify that Microsoft accepted the version manifest and that both architecture hashes match the release archives. Catalogue availability follows Microsoft review.
